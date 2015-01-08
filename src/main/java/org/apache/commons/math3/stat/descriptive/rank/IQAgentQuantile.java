@@ -3,6 +3,12 @@ package org.apache.commons.math3.stat.descriptive.rank;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+
+import org.apache.commons.math3.exception.OutOfRangeException;
+import org.apache.commons.math3.util.MathArrays;
+import org.apache.commons.math3.util.MathUtils;
+import org.apache.commons.math3.util.MathArrays.OrderDirection;
 
 public class IQAgentQuantile {
 	
@@ -14,15 +20,90 @@ public class IQAgentQuantile {
 	
 	private double[] quantiles;
 	
-	private long totalCount;
+	private long totalCount;	
 	
 	/**
 	 * @param pValues array of double values the first must be 0., the last must be 1.
 	 * @param bufferSize buffer size, must be at least 1
 	 */
 	public IQAgentQuantile(double[] pValues, int bufferSize) {
+		
+		// TODO improve argument checks
+		MathUtils.checkNotNull(pValues);
+		MathArrays.checkOrder(pValues, OrderDirection.INCREASING, true);
+		if (pValues.length < 2) {
+			throw new IllegalArgumentException();
+		}
+		if (pValues[0] != 0.) {
+			throw new IllegalArgumentException();
+		}
+		if (pValues[pValues.length-1] != 1.) {
+			throw new IllegalArgumentException();
+		}
+		if (bufferSize<1) {
+			throw new IllegalArgumentException();
+		}
+		
+		
 		this.pValues = pValues;
 		this.buffer = new double[bufferSize];
+	}
+	
+	static final Histogram asHistogram(final double[] pValues, final double[] quantiles, final long count, final double scale) {
+		
+		final double extremeValueWeight = 0.5/count;
+		
+		return new Histogram() {
+			
+			public int getNumberOfBins() {
+				return pValues.length+1;
+			}
+			
+			public double getFrequency(int idx) {
+				if (idx > 0 && idx < pValues.length) {
+					return Math.max(0., Math.min(1. - extremeValueWeight, pValues[idx]) - Math.max(extremeValueWeight, pValues[idx-1]))*scale;
+				} else {					
+					return extremeValueWeight*scale;
+				}
+			}
+			
+			public double getBoundary(int idx) {
+				if (idx <= 0) {
+					return quantiles[0];
+				}
+				else if (idx > quantiles.length) {
+					return quantiles[quantiles.length-1];
+				}
+				else {
+					return quantiles[idx-1];
+				}
+			}
+		};
+	}
+	
+	private void collapse() {
+		
+		if (bufferCounter == 0) {
+			return;
+		}
+		
+		final Collection<Histogram> histograms = new ArrayList<Histogram>(2);
+		
+		final double fractionValuesInBuffer = ((double)bufferCounter)/totalCount;
+		
+		// add histogram of buffer values
+		
+		// TODO
+		double[] bufferCopy = Arrays.copyOf(buffer, bufferCounter);
+		Arrays.sort(bufferCopy);
+		histograms.add(sortedValuesAsHistogram(bufferCopy, fractionValuesInBuffer));
+		
+		if (quantiles != null) {
+			histograms.add(asHistogram(pValues, quantiles, totalCount-bufferCounter, 1.-fractionValuesInBuffer));
+		}
+		quantiles = evaluateSumOfHistograms(histograms, pValues);
+		
+		bufferCounter = 0;
 	}
 
 	public void add(double value) {
@@ -30,52 +111,33 @@ public class IQAgentQuantile {
 		buffer[bufferCounter] = value;
 		bufferCounter += 1;
 		totalCount += 1;
-				
+		
 		if (bufferCounter == buffer.length) {
-			
-			final Collection<Histogram> histograms = new ArrayList<Histogram>(2);
-			
-			final double fractionValuesInBuffer = ((double)bufferCounter)/totalCount;
-			
-			// add histogram of buffer values
-			Arrays.sort(buffer);	
-			histograms.add(sortedValuesAsHistogram(buffer, fractionValuesInBuffer));
-			
-			if (quantiles != null) {
-			
-				// add 
-				int numberOfBins = pValues.length+1;
-				
-				final double[] binBoundaries = new double[numberOfBins+1];
-				binBoundaries[0] = quantiles[0];
-				for (int i = 1; i < binBoundaries.length-1; ++i) {
-					binBoundaries[i] = quantiles[i-1];
-				}
-				binBoundaries[binBoundaries.length-1] = quantiles[quantiles.length-1];
-				
-				final double[] cumulativeFrequencies = new double[numberOfBins];
-				final double cumulativeFrequencyMin = 0.5/totalCount;
-				final double cumulativeFrequencyMax = 1.-cumulativeFrequencyMin;
-				
-				cumulativeFrequencies[0] = cumulativeFrequencyMin;
-				for (int i = 1; i < cumulativeFrequencies.length-1; ++i) {
-					double pValue = pValues[i-1]; 
-					if (pValue < cumulativeFrequencyMin) {
-						pValue = cumulativeFrequencyMin;
-					} else if (pValue > cumulativeFrequencyMax) {
-						pValue = cumulativeFrequencyMax;
-					}
-					cumulativeFrequencies[i] = pValue;  
-				}
-				cumulativeFrequencies[cumulativeFrequencies.length-1] = cumulativeFrequencyMax;
-				histograms.add(cumulativeFrequenciesAsHistogram(cumulativeFrequencies, binBoundaries, 1.-fractionValuesInBuffer));
-				
-			}
-			quantiles = evaluateSumOfHistograms(histograms, pValues);
-			bufferCounter = 0;
+			collapse();
 		}
 	}
 	
+	public double getQuantile(double pValue) {
+	
+		// TODO improve argument checking
+		if (pValue < 0. || pValue > 1) {
+			throw new OutOfRangeException(pValue, 0., 1.);
+		}
+		
+		if (totalCount == 0) {
+			return Double.NaN;
+		}
+		
+		collapse();
+
+		
+		// TODO use binary search
+		
+		final Histogram histogram = asHistogram(pValues, quantiles, totalCount-bufferCounter, 1.);
+		
+		return evaluateSumOfHistograms(Collections.singleton(histogram), new double[]{pValue})[0];
+		
+	}
 	
 	/**
 	 * A histogram.
@@ -197,20 +259,20 @@ public class IQAgentQuantile {
 					final double leftChildValue = values[leftChildIdx];
 					final double rightChildValue = values[rightChildIdx];
 					
-					final int minChild;
+					final int minChildIdx;
 					final double minChildValue;
 					if (rightChildValue < leftChildValue) {
-						minChild = rightChildIdx;
+						minChildIdx = rightChildIdx;
 						minChildValue = rightChildValue;
 					}
 					else {
-						minChild = leftChildIdx;
+						minChildIdx = leftChildIdx;
 						minChildValue = leftChildValue;
 					}
 					if (minChildValue < newValue) {
 						values[parentIdx] = minChildValue;
-						indices[parentIdx] = indices[minChild];
-						parentIdx = minChild;
+						indices[parentIdx] = indices[minChildIdx];
+						parentIdx = minChildIdx;
 						continue;
 					}
 				} else if (leftChildIdx == n-1) {
@@ -302,137 +364,6 @@ public class IQAgentQuantile {
 		}
 	}
 	
-	final static class TwoHistogramsIterator implements HistogramIterator {
-		
-		private final Histogram histogram0;
-		private final Histogram histogram1;
-		private double next0;
-		private double next1;
-		private int nextIndex;
-		private double gradient0;
-		private double gradient1;
-		private int counter0;
-		private int counter1;
-		private double minY;
-		private double maxY;
-		private double minX;
-		private double maxX;
-		private double gradient;
-
-		public TwoHistogramsIterator(Histogram histogram0, Histogram histogram1) {
-			
-			this.histogram0 = histogram0;
-			this.histogram1 = histogram1;
-			this.counter0 = 0;
-			this.counter1 = 0;
-			this.gradient0 = 0.;
-			this.gradient1 = 0.;
-			this.gradient = 0.;
-			
-			double yBegin = 0.;
-			
-			this.next0 = histogram0.getBoundary(0);
-			this.next1 = histogram1.getBoundary(0);
-			if (next0 <= next1) {
-				this.maxX = next0;
-				this.nextIndex = 0;
-			}
-			else {
-				this.maxX = next1;
-				this.nextIndex = 1;
-			}
-			
-			this.minY = yBegin;
-			this.maxY = yBegin;
-			this.minX = Double.NEGATIVE_INFINITY;			
-		}
-		
-		public boolean advance() {
-			minX = maxX;
-			minY = maxY;
-			
-			final int pos;
-			final Histogram histogram;
-			if (nextIndex == 0) {
-				counter0 += 1;
-				pos = counter0;
-				histogram = histogram0;
-			}
-			else {
-				counter1 += 1;
-				pos = counter1;
-				histogram = histogram1;
-				
-			}
-			
-			if (pos <= histogram.getNumberOfBins()) {			
-				final double nextPointX = histogram.getBoundary(pos);
-				final double weightedDeltaY = histogram.getFrequency(pos-1);
-				if (minX < nextPointX) {
-					if (nextIndex==0) {
-						gradient0 = weightedDeltaY/(nextPointX-minX);
-						next0 = nextPointX;
-					}
-					else {
-						gradient1 = weightedDeltaY/(nextPointX-minX);
-						next1 = nextPointX;
-					}
-					gradient = gradient0 + gradient1;
-					if (next0 <= next1) {
-						maxX = next0;
-						nextIndex = 0;
-					}
-					else {
-						maxX = next1;
-						nextIndex = 1;
-					}
-					maxY += gradient*(maxX - minX);
-				}
-				else {
-					gradient = Double.POSITIVE_INFINITY;
-					maxY += weightedDeltaY;
-				}
-				return true;
-			}
-			else {
-				if (nextIndex==0) {
-					gradient0 = 0.0;
-					next0 = Double.POSITIVE_INFINITY;
-					maxX = next1;
-					nextIndex = 1;
-				}
-				else {
-					gradient1 = 0.0;
-					next1 = Double.POSITIVE_INFINITY;
-					maxX = next0;
-					nextIndex = 0;
-				}
-				gradient = Double.POSITIVE_INFINITY;
-				return (maxX != Double.POSITIVE_INFINITY);
-			}
-		}
-		
-		public double getMinimumValue() {
-			return minX;
-		}
-
-		public double getMaximumValue() {
-			return maxX;
-		}
-		
-		public double getDensity() {
-			return gradient;
-		}
-		
-		public double getMinimumCumulativeFrequency() {
-			return minY;
-		}
-		
-		public double getMaximumCumulativeFrequency() {
-			return maxY;
-		}
-	}
-	
 	final static class HistogramIterator1 implements HistogramIterator {
 			
 		private final Histogram[] histograms;
@@ -483,16 +414,16 @@ public class IQAgentQuantile {
 			
 			if (pos <= histogram.getNumberOfBins()) {			
 				final double nextPointX = histogram.getBoundary(pos);
-				final double weightedDeltaY = histogram.getFrequency(pos-1);
+				final double deltaY = histogram.getFrequency(pos-1);
 				if (minX < nextPointX) {
-					gradient = gradientSum.update(histogramIdx, weightedDeltaY/(nextPointX-minX));
+					gradient = gradientSum.update(histogramIdx, deltaY/(nextPointX-minX)); // TODO handle potential overflow
 					heap.update(nextPointX);
 					maxX = heap.getMinValue();
 					maxY += gradient*(maxX - minX);
 				}
 				else {
 					gradient = Double.POSITIVE_INFINITY;
-					maxY += weightedDeltaY;
+					maxY += deltaY;
 				}
 				return true;
 			}
@@ -500,7 +431,13 @@ public class IQAgentQuantile {
 				heap.update(Double.POSITIVE_INFINITY);
 				gradient = gradientSum.update(histogramIdx, 0.0);
 				maxX = heap.getMinValue();
-				return (maxX != Double.POSITIVE_INFINITY);
+				if (maxX != Double.POSITIVE_INFINITY) {
+					maxY += gradient*(maxX - minX);
+					return true;
+				}
+				else {
+					return false;
+				}
 			}
 		}
 		
@@ -523,6 +460,18 @@ public class IQAgentQuantile {
 		public double getMaximumCumulativeFrequency() {
 			return maxY;
 		}
+
+		@Override
+		public String toString() {
+			return "HistogramIterator1 [histograms="
+					+ Arrays.toString(histograms) + ", heap=" + heap
+					+ ", gradientSum=" + gradientSum + ", counters="
+					+ Arrays.toString(counters) + ", minY=" + minY + ", maxY="
+					+ maxY + ", minX=" + minX + ", maxX=" + maxX
+					+ ", gradient=" + gradient + "]";
+		}
+		
+		
 	}
 	
 	/**
@@ -611,19 +560,18 @@ public class IQAgentQuantile {
 		while(valueCounter < cumulativeFrequencies.length && iterator.advance()) {
 			
 			if (iterator.getMinimumCumulativeFrequency() != iterator.getMaximumCumulativeFrequency()) {
-				if (cumulativeFrequencies[valueCounter] != iterator.getMinimumCumulativeFrequency()) {
-					while(valueCounter < cumulativeFrequencies.length && cumulativeFrequencies[valueCounter] < iterator.getMaximumCumulativeFrequency()) {
-						values[valueCounter] = interpolate(iterator.getMinimumCumulativeFrequency(), iterator.getMinimumValue(), iterator.getMaximumCumulativeFrequency(), iterator.getMaximumValue(), cumulativeFrequencies[valueCounter]);
-						valueCounter += 1;
-					}
-					if (valueCounter < cumulativeFrequencies.length && cumulativeFrequencies[valueCounter] == iterator.getMaximumCumulativeFrequency()) {
-						values[valueCounter] = iterator.getMaximumValue();
-					}
-				}
-				else {
+				if (cumulativeFrequencies[valueCounter] == iterator.getMinimumCumulativeFrequency()) {
 					values[valueCounter]+=iterator.getMinimumValue();
 					values[valueCounter]*=0.5;
 					valueCounter += 1;
+				}
+				
+				while(valueCounter < cumulativeFrequencies.length && cumulativeFrequencies[valueCounter] < iterator.getMaximumCumulativeFrequency()) {
+					values[valueCounter] = interpolate(iterator.getMinimumCumulativeFrequency(), iterator.getMinimumValue(), iterator.getMaximumCumulativeFrequency(), iterator.getMaximumValue(), cumulativeFrequencies[valueCounter]);
+					valueCounter += 1;
+				}
+				if (valueCounter < cumulativeFrequencies.length && cumulativeFrequencies[valueCounter] == iterator.getMaximumCumulativeFrequency()) {
+					values[valueCounter] = iterator.getMaximumValue();
 				}
 			}
 		}
@@ -635,4 +583,15 @@ public class IQAgentQuantile {
 	
 		return values;
 	}
+
+	@Override
+	public String toString() {
+		return "IQAgentQuantile [buffer=" + Arrays.toString(buffer)
+				+ ", bufferCounter=" + bufferCounter + ", pValues="
+				+ Arrays.toString(pValues) + ", quantiles="
+				+ Arrays.toString(quantiles) + ", totalCount=" + totalCount
+				+ "]";
+	}
+	
+	
 }
