@@ -12,13 +12,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.math3.random.RandomGenerator;
-import org.apache.commons.math3.random.Well1024a;
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.DynamicSum;
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.Histogram;
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.HistogramIterator;
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.HistogramIterator1;
-import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.MinDoubleIntHeap;
 import org.apache.commons.math3.util.MathArrays;
 import org.apache.commons.math3.util.MathArrays.OrderDirection;
 import org.junit.Ignore;
@@ -29,14 +26,17 @@ public class IQAgentQuantileTest {
 	@Ignore
 	@Test
 	public void testPerformance() {
-		
-		double[] pValues = {0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 0.995, 1.0};
-		
+		int numPValues = 30;
+		double[] pValues = new double[numPValues];
+		for (int i = 0; i < numPValues; ++i) {
+			pValues[i] = i/(numPValues-1.);
+		}
+			
 		final int N = 500000000;
 		final IQAgentQuantile quantile =  new IQAgentQuantile(pValues, 30);
 		
 		for (int i = 0; i < N; ++i) {
-			quantile.add(1.423);
+			quantile.add(i);
 		}
 	}
 	
@@ -54,73 +54,7 @@ public class IQAgentQuantileTest {
 		
 	}
 	
-	@Test
-	public void testMinDoubleIntHeap1() {
-		
-		MinDoubleIntHeap heap = new MinDoubleIntHeap(new double[]{2., 1., 3., 5., 4.});		
-		assertEquals(1, heap.getMinIndex());
-		assertEquals(1., heap.getMinValue(), 0.);
-		
-		heap.update(6.);
-		assertEquals(0, heap.getMinIndex());
-		assertEquals(2., heap.getMinValue(), 0.);
 
-		heap.update(7.);
-		assertEquals(2, heap.getMinIndex());
-		assertEquals(3., heap.getMinValue(), 0.);
-
-		heap.update(8.);
-		assertEquals(4, heap.getMinIndex());
-		assertEquals(4., heap.getMinValue(), 0.);
-		
-		heap.update(9.);
-		assertEquals(3, heap.getMinIndex());
-		assertEquals(5., heap.getMinValue(), 0.);
-		
-		heap.update(10.);
-		assertEquals(1, heap.getMinIndex());
-		assertEquals(6., heap.getMinValue(), 0.);
-	}
-	
-	@Test
-	public void testMinDoubleIntHeap2() {
-		
-		MinDoubleIntHeap heap = new MinDoubleIntHeap(new double[]{2., 1.});		
-		assertEquals(1, heap.getMinIndex());
-		assertEquals(1., heap.getMinValue(), 0.);
-		
-		heap.update(3.);
-		assertEquals(0, heap.getMinIndex());
-		assertEquals(2., heap.getMinValue(), 0.);
-
-		heap.update(4.);
-		assertEquals(1, heap.getMinIndex());
-		assertEquals(3., heap.getMinValue(), 0.);
-	}
-	
-	@Test
-	public void testMinDoubleIntHeap3() {
-		
-		MinDoubleIntHeap heap = new MinDoubleIntHeap(new double[]{3., 1.});		
-		assertEquals(1, heap.getMinIndex());
-		assertEquals(1., heap.getMinValue(), 0.);
-		
-		heap.update(2.);
-		assertEquals(1, heap.getMinIndex());
-		assertEquals(2., heap.getMinValue(), 0.);
-	}
-	
-	@Test
-	public void testMinDoubleIntHeap4() {
-		
-		MinDoubleIntHeap heap = new MinDoubleIntHeap(new double[]{2., 1., 3., 5., 4.});		
-		assertEquals(1, heap.getMinIndex());
-		assertEquals(1., heap.getMinValue(), 0.);
-		
-		heap.update(1.5);
-		assertEquals(1, heap.getMinIndex());
-		assertEquals(1.5, heap.getMinValue(), 0.);
-	}
 
 	
 /*	@Test
@@ -250,7 +184,7 @@ public class IQAgentQuantileTest {
 
 		Collection<Histogram> histograms = new ArrayList<Histogram>();
 		
-		histograms.add(IQAgentQuantile.sortedValuesAsHistogram(new double[]{2.7}, 3.));
+		histograms.add(IQAgentQuantile.sortedValuesAsHistogram(new double[]{2.7}, 1, 3.));
 		
 		HistogramIterator iterator = iteratorSupplier.get(histograms);
 		
@@ -284,7 +218,7 @@ public class IQAgentQuantileTest {
 		
 		final double[] values1 = {0.05, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95};
 		Arrays.sort(values1);
-		final Histogram histogram1 = IQAgentQuantile.sortedValuesAsHistogram(values1, 10./170.);
+		final Histogram histogram1 = IQAgentQuantile.sortedValuesAsHistogram(values1, values1.length, 10./170.);
 		
 		double[] quantiles = {0.0, 0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.0};
 		final Histogram histogram2 = IQAgentQuantile.asHistogram(pValues, quantiles, 160, 160./170.);
@@ -315,7 +249,7 @@ public class IQAgentQuantileTest {
 		
 		final double scale = 7.;
 		
-		final Histogram histogram = IQAgentQuantile.sortedValuesAsHistogram(values, scale);
+		final Histogram histogram = IQAgentQuantile.sortedValuesAsHistogram(values, values.length, scale);
 		
 		assertEquals(5, histogram.getNumberOfBins());
 		
@@ -428,7 +362,7 @@ public class IQAgentQuantileTest {
 		
 		final double[] values = {0.24053641567148587, 0.3332183994766498, 0.3851891847407185, 0.5504370051176339, 0.5975452777972018, 0.6374174253501083, 0.730967787376657, 0.8791825178724801, 0.9412491794821144, 0.984841540199809};
 		
-		final Histogram histogram = IQAgentQuantile.sortedValuesAsHistogram(values, 1.);
+		final Histogram histogram = IQAgentQuantile.sortedValuesAsHistogram(values, values.length, 1.);
 		
 		final double[] cumulativeFrequencies = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
 
@@ -489,7 +423,7 @@ public class IQAgentQuantileTest {
 		final double min = -4.7;
 		final double max = 5.7;
 			
-		final Histogram histogram = IQAgentQuantile.sortedValuesAsHistogram(new double[]{min,max}, 2.);
+		final Histogram histogram = IQAgentQuantile.sortedValuesAsHistogram(new double[]{min,max}, 2, 2.);
 		
 		final double[] cumulativeFrequencies = {-1., 0., 1., 2., 3.};
 		final double[] expectedValues = {min, min, (min+max)*0.5, max, max};
@@ -505,7 +439,7 @@ public class IQAgentQuantileTest {
 		final double min = -4.7;
 		final double max = 5.7;
 			
-		final Histogram histogram = IQAgentQuantile.sortedValuesAsHistogram(new double[]{min,max}, 2.);
+		final Histogram histogram = IQAgentQuantile.sortedValuesAsHistogram(new double[]{min,max}, 2, 2.);
 		
 		final double[] cumulativeFrequencies = {-1., 0., 1.};
 		final double[] expectedValues = {min, min, (min+max)*0.5};
@@ -552,8 +486,8 @@ public class IQAgentQuantileTest {
 		
 		final IQAgentQuantile quantileEstimator = new IQAgentQuantile(new double[]{0., 0.5, 1.}, 2);
 		
-		final double value1 = 0;//545.4545;
-		final double value2 = 1;//765.1234;
+		final double value1 = 545.4545;
+		final double value2 = 765.1234;
 		
 		final double eps = 1e-8;
 		

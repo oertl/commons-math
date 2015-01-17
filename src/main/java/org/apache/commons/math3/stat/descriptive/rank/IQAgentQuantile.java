@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 import org.apache.commons.math3.exception.OutOfRangeException;
+import org.apache.commons.math3.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeap;
 import org.apache.commons.math3.util.MathArrays;
 import org.apache.commons.math3.util.MathUtils;
 import org.apache.commons.math3.util.MathArrays.OrderDirection;
@@ -21,6 +22,8 @@ public class IQAgentQuantile {
 	private double[] quantiles;
 	
 	private long totalCount;	
+	
+	// TODO exclude 0. and 1. from pValues
 	
 	/**
 	 * @param pValues array of double values the first must be 0., the last must be 1.
@@ -40,6 +43,7 @@ public class IQAgentQuantile {
 		if (pValues[pValues.length-1] != 1.) {
 			throw new IllegalArgumentException();
 		}
+		
 		if (bufferSize<1) {
 			throw new IllegalArgumentException();
 		}
@@ -87,40 +91,45 @@ public class IQAgentQuantile {
 			return;
 		}
 		
+		totalCount += bufferCounter;
+		
 		final Collection<Histogram> histograms = new ArrayList<Histogram>(2);
 		
 		final double fractionValuesInBuffer = ((double)bufferCounter)/totalCount;
 		
 		// add histogram of buffer values
 		
-		// TODO
-		double[] bufferCopy = Arrays.copyOf(buffer, bufferCounter);
-		Arrays.sort(bufferCopy);
-		histograms.add(sortedValuesAsHistogram(bufferCopy, fractionValuesInBuffer));
+		Arrays.sort(buffer, 0, bufferCounter);
+		
+		double maximum = buffer[bufferCounter-1]; 
+
+		histograms.add(sortedValuesAsHistogram(buffer, bufferCounter, fractionValuesInBuffer));
 		
 		if (quantiles != null) {
+			maximum = Math.max(maximum, quantiles[quantiles.length-1]);
 			histograms.add(asHistogram(pValues, quantiles, totalCount-bufferCounter, 1.-fractionValuesInBuffer));
+			
 		}
 		quantiles = evaluateSumOfHistograms(histograms, pValues);
+		
+		// ensure that last quantile is equal to maximum
+		quantiles[quantiles.length-1] = maximum;
 		
 		bufferCounter = 0;
 	}
 
 	public void add(double value) {
-		
+		MathUtils.checkFinite(value);
 		buffer[bufferCounter] = value;
 		bufferCounter += 1;
-		totalCount += 1;
-		
 		if (bufferCounter == buffer.length) {
 			collapse();
 		}
 	}
 	
 	public double getQuantile(double pValue) {
-	
-		// TODO improve argument checking
-		if (pValue < 0. || pValue > 1) {
+
+		if (pValue < 0. || pValue > 1.) {
 			throw new OutOfRangeException(pValue, 0., 1.);
 		}
 		
@@ -213,168 +222,17 @@ public class IQAgentQuantile {
 		}
 	}
 	
-	final static class MinDoubleIntHeap {
-		
-		private final double[] values;
-		private final int[] indices;
-		
-		public MinDoubleIntHeap(double[] values) {
-			int n = values.length;
-			
-			this.values = new double[n];
-			this.indices = new int[n];
-			for (int i = 0; i < n; ++i) {
-				this.values[i] = Double.NEGATIVE_INFINITY;
-			}
-			for (int i = 0; i < n; ++i) {
-				this.indices[0] = i;
-				update(values[i]);
-			}
-		}
-		
-		public int getMinIndex() {
-			return indices[0];
-		}
-		
-		public double getMinValue() {
-			return values[0];
-		}
-		
-		public void update(double newValue) {
-			
-			final int n = values.length;
-			
-			final int updatedIndex = indices[0];
-			
-			int parentIdx = 0;
-			
-			while(true) {
-				
-				int leftChildIdx = (parentIdx << 1) | 1;			
-				
-				if (leftChildIdx < n-1) {
-					
-					final int rightChildIdx = leftChildIdx+1;
-					
-					final double leftChildValue = values[leftChildIdx];
-					final double rightChildValue = values[rightChildIdx];
-					
-					final int minChildIdx;
-					final double minChildValue;
-					if (rightChildValue < leftChildValue) {
-						minChildIdx = rightChildIdx;
-						minChildValue = rightChildValue;
-					}
-					else {
-						minChildIdx = leftChildIdx;
-						minChildValue = leftChildValue;
-					}
-					if (minChildValue < newValue) {
-						values[parentIdx] = minChildValue;
-						indices[parentIdx] = indices[minChildIdx];
-						parentIdx = minChildIdx;
-						continue;
-					}
-				} else if (leftChildIdx == n-1) {
-					final double leftChildValue = values[leftChildIdx];
-					if (leftChildValue < newValue) {
-						values[parentIdx] = leftChildValue;
-						indices[parentIdx] = indices[leftChildIdx];
-						parentIdx = leftChildIdx;
-					}
-				}
-				break;
-			}
-			values[parentIdx] = newValue;
-			indices[parentIdx] = updatedIndex;		
-		}
-	}
-	
-	final static class MinDoubleIntHeap2 {
-		
-		private final double[] values;
-		private final int[] indices;
-		
-		public MinDoubleIntHeap2(double[] values) {
-			int nt = values.length;
-			
-			int n = (Integer.highestOneBit(nt)<<1)-1;
-			
-			
-			
-			this.values = new double[n];
-			this.indices = new int[n];
-			for (int i = 0; i < nt; ++i) {
-				this.values[i] = Double.NEGATIVE_INFINITY;
-			}
-			for (int i = nt; i < n; ++i) {
-				this.values[i] = Double.NaN;
-			}
-			for (int i = 0; i < nt; ++i) {
-				this.indices[0] = i;
-				update(values[i]);
-			}
-		}
-		
-		public int getMinIndex() {
-			return indices[0];
-		}
-		
-		public double getMinValue() {
-			return values[0];
-		}
-		
-		public void update(double newValue) {
-			
-			final int n = values.length;
-			
-			final int updatedIndex = indices[0];
-			
-			int parentIdx = 0;
-			
-			for(int i = n; i!=1; i>>=1 ) {
-				
-				final int leftChildIdx = (parentIdx << 1) | 1;			
-				final int rightChildIdx = leftChildIdx+1;
-				
-				final double leftChildValue = values[leftChildIdx];
-				final double rightChildValue = values[rightChildIdx];
-				
-				final int minChild;
-				final double minChildValue;
-				if (rightChildValue < leftChildValue) {
-					minChild = rightChildIdx;
-					minChildValue = rightChildValue;
-				}
-				else {
-					minChild = leftChildIdx;
-					minChildValue = leftChildValue;
-				}
-				if (minChildValue < newValue) {
-					values[parentIdx] = minChildValue;
-					indices[parentIdx] = indices[minChild];
-					parentIdx = minChild;
-				}
-				else {
-					break;
-				}
-			}
-			values[parentIdx] = newValue;
-			indices[parentIdx] = updatedIndex;		
-		}
-	}
-	
 	final static class HistogramIterator1 implements HistogramIterator {
 			
 		private final Histogram[] histograms;
 		private final MinDoubleIntHeap heap;
-		private final DynamicSum gradientSum;
+		private final DynamicSum densitySum;
 		private final int[] counters;
-		private double minY;
-		private double maxY;
-		private double minX;
-		private double maxX;
-		private double gradient;
+		private double minCumulativeFrequency;
+		private double maxCumulativeFrequency;
+		private double minValue;
+		private double maxValue;
+		private double density;
 
 		public HistogramIterator1(final Collection<? extends Histogram> histograms) {
 			
@@ -382,8 +240,8 @@ public class IQAgentQuantile {
 			
 			this.histograms = histograms.toArray(new Histogram[numHistograms]);
 			this.counters = new int[numHistograms];
-			this.gradientSum = new DynamicSum(numHistograms);
-			this.gradient = 0.;
+			this.densitySum = new DynamicSum(numHistograms);
+			this.density = 0.;
 			
 			double yBegin = 0.;
 			
@@ -393,17 +251,17 @@ public class IQAgentQuantile {
 				minValues[histogramIdx] = histogram.getBoundary(0); 
 			}
 			
-			this.heap = new MinDoubleIntHeap(minValues);
+			this.heap = MinHeapUtils.createMinDoubleIntHeap(minValues);
 			
-			this.minY = yBegin;
-			this.maxY = yBegin;
-			this.minX = Double.NEGATIVE_INFINITY;			
-			this.maxX = heap.getMinValue();
+			this.minCumulativeFrequency = yBegin;
+			this.maxCumulativeFrequency = yBegin;
+			this.minValue = Double.NEGATIVE_INFINITY;			
+			this.maxValue = heap.getMinValue();
 		}
 		
 		public boolean advance() {
-			minX = maxX;
-			minY = maxY;
+			minValue = maxValue;
+			minCumulativeFrequency = maxCumulativeFrequency;
 			
 			final int histogramIdx = heap.getMinIndex();
 			
@@ -415,24 +273,24 @@ public class IQAgentQuantile {
 			if (pos <= histogram.getNumberOfBins()) {			
 				final double nextPointX = histogram.getBoundary(pos);
 				final double deltaY = histogram.getFrequency(pos-1);
-				if (minX < nextPointX) {
-					gradient = gradientSum.update(histogramIdx, deltaY/(nextPointX-minX)); // TODO handle potential overflow
+				if (minValue < nextPointX) {
+					density = densitySum.update(histogramIdx, deltaY/(nextPointX-minValue)); // TODO handle potential overflow
 					heap.update(nextPointX);
-					maxX = heap.getMinValue();
-					maxY += gradient*(maxX - minX);
+					maxValue = heap.getMinValue();
+					maxCumulativeFrequency += density*(maxValue - minValue);
 				}
 				else {
-					gradient = Double.POSITIVE_INFINITY;
-					maxY += deltaY;
+					density = Double.POSITIVE_INFINITY;
+					maxCumulativeFrequency += deltaY;
 				}
 				return true;
 			}
 			else {
 				heap.update(Double.POSITIVE_INFINITY);
-				gradient = gradientSum.update(histogramIdx, 0.0);
-				maxX = heap.getMinValue();
-				if (maxX != Double.POSITIVE_INFINITY) {
-					maxY += gradient*(maxX - minX);
+				density = densitySum.update(histogramIdx, 0.0);
+				maxValue = heap.getMinValue();
+				if (maxValue != Double.POSITIVE_INFINITY) {
+					maxCumulativeFrequency += density*(maxValue - minValue);
 					return true;
 				}
 				else {
@@ -442,33 +300,33 @@ public class IQAgentQuantile {
 		}
 		
 		public double getMinimumValue() {
-			return minX;
+			return minValue;
 		}
 
 		public double getMaximumValue() {
-			return maxX;
+			return maxValue;
 		}
 		
 		public double getDensity() {
-			return gradient;
+			return density;
 		}
 		
 		public double getMinimumCumulativeFrequency() {
-			return minY;
+			return minCumulativeFrequency;
 		}
 		
 		public double getMaximumCumulativeFrequency() {
-			return maxY;
+			return maxCumulativeFrequency;
 		}
 
 		@Override
 		public String toString() {
 			return "HistogramIterator1 [histograms="
 					+ Arrays.toString(histograms) + ", heap=" + heap
-					+ ", gradientSum=" + gradientSum + ", counters="
-					+ Arrays.toString(counters) + ", minY=" + minY + ", maxY="
-					+ maxY + ", minX=" + minX + ", maxX=" + maxX
-					+ ", gradient=" + gradient + "]";
+					+ ", gradientSum=" + densitySum + ", counters="
+					+ Arrays.toString(counters) + ", minY=" + minCumulativeFrequency + ", maxY="
+					+ maxCumulativeFrequency + ", minX=" + minValue + ", maxX=" + maxValue
+					+ ", gradient=" + density + "]";
 		}
 		
 		
@@ -480,11 +338,12 @@ public class IQAgentQuantile {
 	 * The returned histogram is backed by the array.
 	 * 
 	 * @param values an array of double values in ascending order with length at least 1
+	 * @param size defines the number of leading array elements that are used for the histogram
 	 * @return a histogram backed by the given array
 	 */
-	static final Histogram sortedValuesAsHistogram(final double[] values, final double scale) {
+	static final Histogram sortedValuesAsHistogram(final double[] values, final int size, final double scale) {
 		
-		final double increment = scale/values.length;
+		final double increment = scale/size;
 		
 		return new Histogram() {
 			
@@ -493,7 +352,7 @@ public class IQAgentQuantile {
 			}
 			
 			public int getNumberOfBins() {
-				return (values.length<<1)-1;
+				return (size<<1)-1;
 			}
 
 			public double getFrequency(int idx) {
