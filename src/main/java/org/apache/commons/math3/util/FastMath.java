@@ -838,7 +838,7 @@ public class FastMath {
      *
      * Computes exp(x), function result is nearly rounded.   It will be correctly
      * rounded to the theoretical value for 99.9% of input values, otherwise it will
-     * have a 1 UPL error.
+     * have a 1 ULP error.
      *
      * Method:
      *    Lookup intVal = exp(int(x))
