@@ -11,9 +11,30 @@ import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.SortedCent
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.sun.javafx.css.CalculatedValue;
-
 public class TDigestQuantileTest {
+	
+	private static final PartitionStrategy NEVER_MERGE_PARTITION_STRATEGY = new PartitionStrategy() {
+		public int partition(SortedCentroids sortedCentroids, int[] partitionIndices) {
+			int size = sortedCentroids.size();
+			for (int i = 0; i < size; ++i) {
+				partitionIndices[i] = i+1;
+			}
+			return size;
+		}
+	};
+	
+	private static final PartitionStrategy ALWAYS_MERGE_PARTITION_STRATEGY = new PartitionStrategy() {
+		public int partition(SortedCentroids sortedCentroids, int[] partitionIndices) {
+			int size = sortedCentroids.size();
+			if (size > 0) {
+				partitionIndices[0] = size;
+				return 1;
+			}
+			else {
+				return 0;
+			}
+		}
+	};
 	
 	@Test
 	public void testSortedValuesAsSortedCentroids() {
@@ -113,7 +134,7 @@ public class TDigestQuantileTest {
 	public void testPerformance() {
 		
 		final int N = 500000000;
-		final TDigestQuantile quantile =  new TDigestQuantile(new DefaultPartitionStrategy(1e-1), 1000);
+		final TDigestQuantile quantile =  new TDigestQuantile(new DefaultPartitionStrategy(1e-2), 1000);
 		
 		for (int i = 0; i < N; ++i) {
 			quantile.add(i);
@@ -135,6 +156,72 @@ public class TDigestQuantileTest {
 				
 		assertArrayEquals(new long[]{2, 5, 6}, mergedAccumulatedCentroidWeights);
 		assertArrayEquals(new double[]{(-2.6 + 3.7)/2., (4.5 + 6.7 + 11.3)/3., 14.7}, mergedCentroidMeans, 1e-8);
+	}
+	
+	@Test
+	public void testGetQuantileNotMerged() {
+		
+		TDigestQuantile tDigestQuantile = new TDigestQuantile(NEVER_MERGE_PARTITION_STRATEGY, 1);
+		
+		double min = 3.4;
+		double max = 17.8;
+		int N_ADD = 100;
+		
+		for (int i = 0; i < N_ADD; ++i) {
+			tDigestQuantile.add(min+i*(max-min)/(N_ADD-1));
+		}
+	
+		double eps = 1e-8;
+		
+		assertEquals(min, tDigestQuantile.getQuantile(0.0), eps);
+		assertEquals((min+max)*0.5, tDigestQuantile.getQuantile(0.5), eps);
+		assertEquals(max, tDigestQuantile.getQuantile(1.0), eps);
+		
+		int N_TEST = 23452;
+		
+		for (int i = 0; i < N_TEST; ++i) {
+			assertEquals(min + i*(max-min)/(N_TEST-1), tDigestQuantile.getQuantile(0.5/N_ADD + ((double)i/(N_TEST-1))*((double)(N_ADD-1))/N_ADD), eps);
+		}
+		
+		for (int i = 0; i < N_TEST; ++i) {
+			assertEquals(min, tDigestQuantile.getQuantile((double)i/(N_TEST-1)*0.5/N_ADD), eps);
+		}
+		for (int i = 0; i < N_TEST; ++i) {
+			assertEquals(max, tDigestQuantile.getQuantile(1.-0.5/N_ADD + (double)i/(N_TEST-1)*0.5/N_ADD), eps);
+		}
+	}
+	
+	@Test
+	public void testGetQuantileAllMerged() {
+		
+		TDigestQuantile tDigestQuantile = new TDigestQuantile(ALWAYS_MERGE_PARTITION_STRATEGY, 1);
+		
+		double min = 3.4;
+		double max = 17.8;
+		int N_ADD = 100;
+		
+		for (int i = 0; i < N_ADD; ++i) {
+			tDigestQuantile.add(min+i*(max-min)/(N_ADD-1));
+		}
+	
+		double eps = 1e-8;
+		
+		assertEquals(min, tDigestQuantile.getQuantile(0.0), eps);
+		assertEquals((min+max)*0.5, tDigestQuantile.getQuantile(0.5), eps);
+		assertEquals(max, tDigestQuantile.getQuantile(1.0), eps);
+		
+		int N_TEST = 23452;
+		
+		for (int i = 0; i < N_TEST; ++i) {
+			assertEquals(min + i*(max-min)/(N_TEST-1), tDigestQuantile.getQuantile(0.5/N_ADD + ((double)i/(N_TEST-1))*((double)(N_ADD-1))/N_ADD), eps);
+		}
+		
+		for (int i = 0; i < N_TEST; ++i) {
+			assertEquals(min, tDigestQuantile.getQuantile((double)i/(N_TEST-1)*0.5/N_ADD), eps);
+		}
+		for (int i = 0; i < N_TEST; ++i) {
+			assertEquals(max, tDigestQuantile.getQuantile(1.-0.5/N_ADD + (double)i/(N_TEST-1)*0.5/N_ADD), eps);
+		}
 	}
 	
 	

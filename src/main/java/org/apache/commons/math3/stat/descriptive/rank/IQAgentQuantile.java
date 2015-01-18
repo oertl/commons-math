@@ -392,7 +392,7 @@ public class IQAgentQuantile {
 	 * @param x1 x-value of point 1
 	 * @param y1 y-value of point 1
 	 * @param x2 x-value of point 2 (x1 < x2)
-	 * @param y2 y-value of point 2
+	 * @param y2 y-value of point 2 (y1 < y2)
 	 * @param x x-value for which the corresponding y-value needs to interpolated 
 	 * @return the interpolated value, is always in the range [y1, y2]
 	 */

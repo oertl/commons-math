@@ -61,7 +61,6 @@ public class TDigestQuantile {
 	        	return 0;
 	        }
 
-			
 			final long totalWeight = sortedCentroids.getTotalWeight();
 			
 			// calculate fill levels
@@ -156,7 +155,7 @@ public class TDigestQuantile {
 		
 		if (size > 0) {	
 			MathUtils.checkFinite(means[0]);
-			MathArrays.checkOrder(means, OrderDirection.INCREASING, false);			
+			MathArrays.checkOrder(means, OrderDirection.INCREASING, false);	// -0.0d and 0.0d are treated as equal		
 			MathUtils.checkFinite(means[size-1]);
 			
 			if (accumulatedWeights[0] < 1) {
@@ -286,7 +285,7 @@ public class TDigestQuantile {
 			heap.update((centroidCounter < centroids.size())?centroids.getMean(centroidCounter):Double.POSITIVE_INFINITY);
 			centroidCounters[index] = centroidCounter;
 		}
-		return asSortedCentroids(mergedMeans, mergedAccumulatedWeights);
+		return asSortedCentroidsUnsafe(mergedMeans, mergedAccumulatedWeights);
 	}
 		
 	private void collapse() {
@@ -361,6 +360,23 @@ public class TDigestQuantile {
         	mergedCentroidMeans[i] = mean;
         }
 	}
+	
+	/**
+	 * Get value between two given points using linear interpolation.
+	 * 
+	 * @param x1 x-value of point 1
+	 * @param y1 y-value of point 1
+	 * @param x2 x-value of point 2 (x1 < x2)
+	 * @param y2 y-value of point 2 (y1 < y2)
+	 * @param x x-value for which the corresponding y-value needs to interpolated 
+	 * @return the interpolated value, is always in the range [y1, y2]
+	 */
+	static double interpolate(double x1, double y1, double x2, double y2, double x) { // TODO could be shared with IQAgentQuantile
+		double alpha = (x - x1)/(x2 - x1);
+		double result = y1 + (y2 - y1)*alpha;
+		return (result <= y2)?result:y2;
+	}
+
 
 	// TODO
 	public double getQuantile(double pValue) {
@@ -377,15 +393,20 @@ public class TDigestQuantile {
 		if (numCentroids == 0) {
 			return Double.NaN;
 		}
-		if (numCentroids == 1) {
-			return centroidMeans[0];
+
+		final long totalCount = accumulatedCentroidWeights[accumulatedCentroidWeights.length-1];
+	
+		final double desiredAccumulatedCentroidWeight = pValue * totalCount;
+		
+		if (desiredAccumulatedCentroidWeight <= 0.5) {
+			return minimum;
+		}
+		if (desiredAccumulatedCentroidWeight >= totalCount-0.5) {
+			return maximum;
 		}
 		
-		final long totalCount = accumulatedCentroidWeights[accumulatedCentroidWeights.length-1];
 		
-		final double index = pValue * (totalCount - 1);
-		
-		int minIndex = 0;
+		int minIndex = -1;
 		int maxIndex = numCentroids;
 		
 		while (maxIndex-minIndex > 1) {
@@ -393,40 +414,69 @@ public class TDigestQuantile {
 			int midIndex = (maxIndex+minIndex) >>> 1;
 		
 			long midWeight = accumulatedCentroidWeights[midIndex];
-			if (midWeight > index) {
+			if (midWeight > desiredAccumulatedCentroidWeight) {
 				maxIndex = midIndex;	
 			}
 			else {
 				minIndex = midIndex;
 			}
 		}
-		/*
-        final double delta = nextIndex - previousIndex;
-        final double previousWeight = (nextIndex - index) / delta;
-        final double nextWeight = (index - previousIndex) / delta;
-        return previousMean * previousWeight + nextMean * nextWeight;*/
 		
-		/*
+		// assert minIndex == maxIndex+1
+		// (minIndex>=0)?accumulatedCentroidWeights[minIndex]:0 <= desiredAccumulatedCentroidWeight < accumulatedCentroidWeights[maxIndex]
 		
+		final long lowerAccumulatedCentroidWeight = (minIndex>=0)?accumulatedCentroidWeights[minIndex]:0;
+		final long upperAccumulatedCentroidWeight = accumulatedCentroidWeights[maxIndex];
+		final double centerAccumulatedCentroidWeight = lowerAccumulatedCentroidWeight + (upperAccumulatedCentroidWeight-lowerAccumulatedCentroidWeight)*0.5;
 		
-        final int centroidCount = 
-        if (centroidCount == 0) {
-            return Double.NaN;
-        } else if (centroidCount == 1) {
-            return centroids().iterator().next().mean();
-        }
+		if (desiredAccumulatedCentroidWeight < centerAccumulatedCentroidWeight)  {
+			if (minIndex >= 0) {
+				// interpolate between centroid[minIndex] and centroid[minIndex+1]
+				final long lowerAccumulatedCentroidWeight2 = (minIndex>0)?accumulatedCentroidWeights[minIndex-1]:0;
+				
+				double upperWeight = centerAccumulatedCentroidWeight;
+				double lowerWeight = (lowerAccumulatedCentroidWeight + lowerAccumulatedCentroidWeight2)*0.5;
+				
+				double upperValue = centroidMeans[minIndex+1];
+				double lowerValue = centroidMeans[minIndex];
+				
+				return interpolate(lowerWeight, lowerValue, upperWeight, upperValue, desiredAccumulatedCentroidWeight);
+			}
+			else {
+				// interpolate between minimum and 1st centroid
 
-		
-		*/
-		
-		// TODO not implemented yet
-		return 0.;
-		
-		
-		
-		
-		
+				double upperWeight = centerAccumulatedCentroidWeight;
+				double lowerWeight = 0.5;
+				
+				double upperValue = centroidMeans[minIndex+1];
+				double lowerValue = minimum;
+				
+				return interpolate(lowerWeight, lowerValue, upperWeight, upperValue, desiredAccumulatedCentroidWeight);
+			}
+		} else {
+			if (maxIndex+1 < numCentroids) {
+				// interpolate between centroid[maxIndex] and centroid [maxIndex+1]
+				
+				final long upperAccumulatedCentroidWeight2 = accumulatedCentroidWeights[maxIndex+1];
+				
+				double upperWeight = (upperAccumulatedCentroidWeight + upperAccumulatedCentroidWeight2) * 0.5;
+				double lowerWeight = centerAccumulatedCentroidWeight;
+				
+				double upperValue = centroidMeans[maxIndex+1];
+				double lowerValue = centroidMeans[maxIndex];
+				
+				return interpolate(lowerWeight, lowerValue, upperWeight, upperValue, desiredAccumulatedCentroidWeight);
+			}
+			else {
+				// interpolate between last centroid and maximum
+
+				double upperWeight = accumulatedCentroidWeights[numCentroids-1]-0.5;
+				double lowerWeight = centerAccumulatedCentroidWeight;
+				double upperValue = maximum;
+				double lowerValue = centroidMeans[numCentroids-1];
+				
+				return interpolate(lowerWeight, lowerValue, upperWeight, upperValue, desiredAccumulatedCentroidWeight);
+			}
+		}
 	}
-	
-
 }
