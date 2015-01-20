@@ -4,11 +4,13 @@ final class MinHeapUtils {
 	
 	private MinHeapUtils() {}
 	
+	// TODO implement specialized versions for heaps of size 1 and 2 to speed up quantile algorithms
+	
 	static final MinDoubleIntHeap createMinDoubleIntHeap(double[] initialValues) {
 		return new MinDoubleIntHeap1(initialValues);
 	}
 
-	// TODO redefine interface, that first updates are guarantted to return getMinIndex as sequential order
+	// TODO redefine interface, that first updates are guaranteed to return getMinIndex as sequential order
 	interface MinDoubleIntHeap {
 		
 		int getMinIndex();

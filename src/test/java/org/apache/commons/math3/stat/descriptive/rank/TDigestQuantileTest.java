@@ -4,8 +4,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 
 import java.util.Arrays;
+import java.util.Random;
 
-import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.DefaultPartitionStrategy;
+import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy1;
+import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy2;
+import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy3;
+import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy4;
 import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy;
 import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.SortedCentroids;
 import org.junit.Ignore;
@@ -97,12 +101,13 @@ public class TDigestQuantileTest {
 	
 	private static final void testPartition(SortedCentroids centroids, PartitionStrategy strategy, int[] expectedPartitionIndices) {
 		final int[] partitionIndices = new int[centroids.size()];
-		final int numPartitions = strategy.partition(centroids, partitionIndices);		
+		final int numPartitions = strategy.partition(centroids, partitionIndices);
+		// System.out.println(Arrays.toString(Arrays.copyOf(partitionIndices, numPartitions)));
 		assertArrayEquals(expectedPartitionIndices, Arrays.copyOf(partitionIndices, numPartitions));		
 	}
 	
 	@Test
-	public void testDefaultStrategy() {
+	public void testPartitionStrategies() {
 
 		final int N = 20;
 		
@@ -118,15 +123,29 @@ public class TDigestQuantileTest {
 		}
 		final SortedCentroids centroids = TDigestQuantile.asSortedCentroids(means, accumulatedWeights);
 		
-		testPartition(centroids, new DefaultPartitionStrategy(0.05), new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy1(0.05), new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy1(0.2), new int[] {1, 2, 3, 5, 8, 11, 14, 16, 17, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy1(1.0), new int[] {1, 14, 19, 20});
+		testPartition(centroids, new PartitionStrategy1(5.0), new int[] {1, 19, 20});
+		testPartition(centroids, new PartitionStrategy1(1000.0), new int[] {1, 19, 20});
 
-		testPartition(centroids, new DefaultPartitionStrategy(0.2), new int[] {1, 2, 3, 5, 8, 11, 14, 16, 17, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy2(0.05), new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy2(0.2), new int[] {1, 2, 3, 5, 8, 11, 14, 16, 17, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy2(1.0), new int[] {1, 14, 19, 20});
+		testPartition(centroids, new PartitionStrategy2(5.0), new int[] {1, 19, 20});
+		testPartition(centroids, new PartitionStrategy2(1000.0), new int[] {1, 19, 20});
 
-		testPartition(centroids, new DefaultPartitionStrategy(1.0), new int[] {1, 14, 19, 20});
-		
-		testPartition(centroids, new DefaultPartitionStrategy(5.0), new int[] {1, 19, 20});
-		
-		testPartition(centroids, new DefaultPartitionStrategy(1000.0), new int[] {1, 19, 20});
+		testPartition(centroids, new PartitionStrategy3(0.05), new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy3(0.2), new int[] {1, 2, 4, 7, 10, 13, 16, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy3(1.0), new int[] {20});
+		testPartition(centroids, new PartitionStrategy3(5.0), new int[] {20});
+		testPartition(centroids, new PartitionStrategy3(1000.0), new int[] {20});
+
+		testPartition(centroids, new PartitionStrategy4(0.05), new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 20});
+		testPartition(centroids, new PartitionStrategy4(0.2), new int[] {3, 6, 8, 9, 20});
+		testPartition(centroids, new PartitionStrategy4(1.0), new int[] {20});
+		testPartition(centroids, new PartitionStrategy4(5.0), new int[] {20});
+		testPartition(centroids, new PartitionStrategy4(1000.0), new int[] {20});
 	}
 	
 	@Ignore
@@ -134,9 +153,12 @@ public class TDigestQuantileTest {
 	public void testPerformance() {
 		
 		final int N = 500000000;
-		final TDigestQuantile quantile =  new TDigestQuantile(new DefaultPartitionStrategy(1e-2), 1000);
+		final TDigestQuantile quantile =  new TDigestQuantile(new PartitionStrategy1(1e-2), 10000);
+		
+		Random random = new Random(); 
 		
 		for (int i = 0; i < N; ++i) {
+			// quantile.add(random.nextDouble());
 			quantile.add(i);
 		}
 	}
@@ -160,6 +182,8 @@ public class TDigestQuantileTest {
 	
 	@Test
 	public void testGetQuantileNotMerged() {
+		
+		// TODO improve test
 		
 		TDigestQuantile tDigestQuantile = new TDigestQuantile(NEVER_MERGE_PARTITION_STRATEGY, 1);
 		
@@ -193,6 +217,8 @@ public class TDigestQuantileTest {
 	
 	@Test
 	public void testGetQuantileAllMerged() {
+		
+		// TODO improve test
 		
 		TDigestQuantile tDigestQuantile = new TDigestQuantile(ALWAYS_MERGE_PARTITION_STRATEGY, 1);
 		

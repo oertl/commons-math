@@ -10,10 +10,13 @@ import org.apache.commons.math3.exception.NotStrictlyPositiveException;
 import org.apache.commons.math3.exception.NumberIsTooLargeException;
 import org.apache.commons.math3.exception.OutOfRangeException;
 import org.apache.commons.math3.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeap;
+import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.MathArrays;
 import org.apache.commons.math3.util.MathUtils;
 import org.apache.commons.math3.util.MathArrays.OrderDirection;
 
+
+// TODO introduce abstract class for TDigestQuantile and IQAgentQuantile
 public class TDigestQuantile {
 	
 	/**
@@ -33,11 +36,92 @@ public class TDigestQuantile {
 		int partition(SortedCentroids sortedCentroids, int[] partitionIndices);
 	}
 	
-	public static class DefaultPartitionStrategy implements PartitionStrategy {
+	
+	public static abstract class AbstractPartitionStrategy implements PartitionStrategy {
+
+		protected interface Partitioner {
+			/**
+			 * Returns {@code true} if the partition criterion is violated, meaning that
+			 * the range [startIdx, endIdx[ need to be  split. 
+			 * 
+			 * @param startIdx
+			 * @param endIdx
+			 * @return
+			 */
+			boolean partitionCriterionViolated(int startIdx, int endIdx);
+		}
+		
+		/**
+		 * Creates a {@link Partitioner} for which the corresponding
+		 * {@link Partitioner#partitionCriterionViolated(int startIdx, int endIdx)}
+		 * must be defined for all {@code 0 <= startIdx < endIdx < sortedCentroids.size()}
+		 * 
+		 * @param sortedCentroids
+		 * @return
+		 */
+		protected abstract Partitioner createPartitioner(SortedCentroids sortedCentroids);
+		
+		
+		public final int partition(SortedCentroids sortedCentroids, int[] partitionIndices) {
+
+			final Partitioner partitioner = createPartitioner(sortedCentroids);
+			final int size = sortedCentroids.size();
+			
+			// partition
+	        int partitionCounter = 0;
+	        int startIdx = 0;
+	        for (int endIdx = 1; endIdx < size; ++endIdx) {
+	        	if (partitioner.partitionCriterionViolated(startIdx, endIdx)) {
+	        		partitionIndices[partitionCounter] = endIdx;
+	        		partitionCounter += 1;
+	        		startIdx = endIdx;
+	        	}
+	        }
+	        partitionIndices[partitionCounter] = size;
+        	partitionCounter += 1;
+	        return partitionCounter;
+		}
+	}
+	
+	/**
+	 * Partition strategy that limits the integral/mean over a centroid of 1/(4*q*(1-q)).
+	 */
+	public final static class PartitionStrategy1 extends AbstractPartitionStrategy {
+
+		private final double limit;
+		
+		public PartitionStrategy1(double delta) {
+			if (delta < 0.) {
+				throw new NotPositiveException(delta);
+			}
+			this.limit = FastMath.expm1(4.*delta);
+		}
+		
+		@Override
+		protected Partitioner createPartitioner(final SortedCentroids sortedCentroids) {
+			return new Partitioner() {
+				
+				private final long w = sortedCentroids.getTotalWeight();
+				private final double lim = Math.min(limit/w, Double.MAX_VALUE);
+				
+				public boolean partitionCriterionViolated(int startIdx, int endIdx) {					
+					long q1 = (startIdx>0)?sortedCentroids.getAccumulatedWeight(startIdx-1):0L;
+					long q2 = sortedCentroids.getAccumulatedWeight(endIdx);
+					return (q2-q1) > lim*q1*(w-q2);
+				}
+			};
+		}
+	}
+	
+	/**
+	 * Partition strategy that limits the integral/mean over a centroid of 1/(4*q*(1-q)).
+	 * This strategy demonstrates the partition problem as partition problem of sums.
+	 */
+	public final static class PartitionStrategy2 implements PartitionStrategy {
 		
 		private final double delta;
 			
-		public DefaultPartitionStrategy(double delta) {
+		public PartitionStrategy2(double delta) {
 			
 			if (delta < 0.) {
 				throw new NotPositiveException(delta);
@@ -95,6 +179,75 @@ public class TDigestQuantile {
 		}	
 	}
 	
+	/**
+	 * Partition strategy that limits 1/(4*q*(1-q)) where q is the mean of a centroid.
+	 * This strategy is similar to the criterion used in the original approach by Ted Dunning.
+	 */
+	public final static class PartitionStrategy3 extends AbstractPartitionStrategy {
+
+		private final double delta;
+		
+		public PartitionStrategy3(double delta) {
+			if (delta < 0.) {
+				throw new NotPositiveException(delta);
+			}
+			this.delta = delta;
+		}
+		
+		@Override
+		protected Partitioner createPartitioner(final SortedCentroids sortedCentroids) {
+			return new Partitioner() {
+				
+				private final long w2;
+				private final double lim;
+				{
+					long w = sortedCentroids.getTotalWeight();
+					w2 = 2*w;
+					lim = Math.min(delta/w, Double.MAX_VALUE);
+				}
+				
+				
+				public boolean partitionCriterionViolated(int startIdx, int endIdx) {					
+					long q1 = (startIdx>0)?sortedCentroids.getAccumulatedWeight(startIdx-1):0L;
+					long q2 = sortedCentroids.getAccumulatedWeight(endIdx);
+					long q = q1 +q2;
+					return (q2-q1) > lim*q*(w2-q);
+				}
+			};
+		}
+	}
+	
+	/**
+	 * Partition strategy that limits the integral/mean over a centroid of 1/sqrt(4*q*(1-q)).
+	 * TODO Still needs to be optimized!
+	 */
+	public final static class PartitionStrategy4 extends AbstractPartitionStrategy {
+
+		private final double delta;
+		
+		public PartitionStrategy4(double delta) {
+			if (delta < 0.) {
+				throw new NotPositiveException(delta);
+			}
+			this.delta = delta;
+		}
+		
+		@Override
+		protected Partitioner createPartitioner(final SortedCentroids sortedCentroids) {
+			return new Partitioner() {
+				
+				private final double w = 2./sortedCentroids.getTotalWeight();
+				private final double lim = 2.*delta;
+				
+				public boolean partitionCriterionViolated(int startIdx, int endIdx) {
+					long q1 = (startIdx>0)?sortedCentroids.getAccumulatedWeight(startIdx-1):0L;
+					long q2 = sortedCentroids.getAccumulatedWeight(endIdx);
+					return FastMath.asin(w*q2)-FastMath.asin(w*q1) > lim; // TODO use addition law for asin to avoid asin evaluations
+				}
+			};
+		}
+	}
+
 	private PartitionStrategy partitionStrategy;
 	
 	private long[] accumulatedCentroidWeights;
@@ -378,7 +531,7 @@ public class TDigestQuantile {
 	}
 
 
-	// TODO
+	// TODO improve method, especially the 4 different cases at its end 
 	public double getQuantile(double pValue) {
 		
 		// TODO improve argument checking
