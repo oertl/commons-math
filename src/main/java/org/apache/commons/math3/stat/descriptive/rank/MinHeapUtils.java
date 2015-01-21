@@ -4,10 +4,15 @@ final class MinHeapUtils {
 	
 	private MinHeapUtils() {}
 	
-	// TODO implement specialized versions for heaps of size 1 and 2 to speed up quantile algorithms
-	
 	static final MinDoubleIntHeap createMinDoubleIntHeap(double[] initialValues) {
-		return new MinDoubleIntHeap1(initialValues);
+		switch(initialValues.length) {
+		case 1:
+			return new MinDoubleIntHeapSingleValue(initialValues[0]);
+		case 2:
+			return new MinDoubleIntHeapTwoValues(initialValues[0], initialValues[1]);
+		default:
+			return new MinDoubleIntHeapGeneral(initialValues);
+		}
 	}
 
 	// TODO redefine interface, that first updates are guaranteed to return getMinIndex as sequential order
@@ -20,12 +25,12 @@ final class MinHeapUtils {
 		void update(double newValue);
 	}
 	
-	final static class MinDoubleIntHeap1 implements MinDoubleIntHeap {
+	final static class MinDoubleIntHeapGeneral implements MinDoubleIntHeap {
 		
 		private final double[] values;
 		private final int[] indices;
 		
-		public MinDoubleIntHeap1(double[] values) {
+		public MinDoubleIntHeapGeneral(double[] values) {
 			int n = values.length;
 			
 			this.values = new double[n];
@@ -170,4 +175,57 @@ final class MinHeapUtils {
 			indices[parentIdx] = updatedIndex;		
 		}
 	}
+	
+	final static class MinDoubleIntHeapSingleValue implements MinDoubleIntHeap {
+		
+		private double value;
+		
+		public MinDoubleIntHeapSingleValue(double value) {
+			this.value = value;
+		}
+		
+		public int getMinIndex() {
+			return 0;
+		}
+		
+		public void update(double newValue) {
+			value = newValue;
+		}
+
+		public double getMinValue() {
+			return value;
+		}
+	}
+	
+	final static class MinDoubleIntHeapTwoValues implements MinDoubleIntHeap {
+		
+		private double value0;
+		private double value1;
+		private int minIndex;
+		
+		public MinDoubleIntHeapTwoValues(double value0, double value1) {
+			this.value0 = value0;
+			this.value1 = value1;
+			minIndex = (value0 <= value1)?0:1;
+		}
+		
+		public int getMinIndex() {
+			return minIndex;
+		}
+		
+		public double getMinValue() {
+			return (minIndex==0)?value0:value1;
+		}
+		
+		public void update(double newValue) {
+			if (minIndex==0) {
+				value0 = newValue;
+			}
+			else {
+				value1 = newValue;
+			}
+			minIndex = (value0 <= value1)?0:1;
+		}
+	}
+
 }
