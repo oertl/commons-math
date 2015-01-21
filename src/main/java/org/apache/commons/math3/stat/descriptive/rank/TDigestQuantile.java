@@ -42,7 +42,15 @@ public class TDigestQuantile {
 		protected interface Partitioner {
 			/**
 			 * Returns {@code true} if the partition criterion is violated, meaning that
-			 * the range [startIdx, endIdx[ need to be  split. 
+			 * the set of centroids with indices in the range [startIdx, endIdx] cannot be merged. 
+			 * <p>
+			 * It is guaranteed that this method will be called as follows:
+			 * <p>
+			 * 1) The first call will be {@code partitionCriterionViolated(0,1)}
+			 * <p>
+			 * 2) The return value of the call {@code partitionCriterionViolated(startIdx, endIdx) determines 
+			 * the arguments of the subsequent call: If the return value was {@code false}, the next call will be {@code partitionCriterionViolated(startIdx, endIdx+1)}.
+			 * If the return value was {@code true}, the next call will be {@code partitionCriterionViolated(endIdx, endIdx+1)}. 
 			 * 
 			 * @param startIdx
 			 * @param endIdx
