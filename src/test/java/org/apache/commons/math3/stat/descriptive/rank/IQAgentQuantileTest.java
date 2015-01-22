@@ -16,6 +16,8 @@ import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.DynamicSum
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.Histogram;
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.HistogramIterator;
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.HistogramIterator1;
+import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy4;
+import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.SimpleBufferStrategy;
 import org.apache.commons.math3.util.MathArrays;
 import org.apache.commons.math3.util.MathArrays.OrderDirection;
 import org.junit.Ignore;
@@ -39,6 +41,39 @@ public class IQAgentQuantileTest {
 			quantile.add(i);
 		}
 	}
+	
+	@Ignore
+	@Test
+	public void testPerformanceRandom() {
+		
+		int numPValues = 30;
+		double[] pValues = new double[numPValues];
+		for (int i = 0; i < numPValues; ++i) {
+			pValues[i] = i/(numPValues-1.);
+		}
+		
+		final int M = 100;
+		final int N = 1000000;
+		
+		final double values[] = new double[N];
+		Random random = new Random(0);
+		for (int i = 0; i < N; ++i) {
+			values[i] = random.nextDouble();
+		}
+		
+		long  start = System.currentTimeMillis();
+		for (int m = 0; m < M; ++m) {			
+			final IQAgentQuantile quantile =  new IQAgentQuantile(pValues, 30);
+			for (int i = 0; i < N; ++i) {
+				quantile.add(values[i]);
+			}
+		}
+		long end = System.currentTimeMillis(); 		
+		
+		System.out.println("Avg time add operation unsorted data = " + ((end - start)*1e6)/(N*M) + "ns.");
+		
+	}
+
 	
 	@Test
 	public void testDynamicSum() {

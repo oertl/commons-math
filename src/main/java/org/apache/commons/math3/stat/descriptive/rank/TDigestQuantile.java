@@ -36,6 +36,30 @@ public class TDigestQuantile {
 		int partition(SortedCentroids sortedCentroids, int[] partitionIndices);
 	}
 	
+	public interface BufferStrategy {
+		/**
+		 * Returns the buffer size dependent on the number of centroids.
+		 * 
+		 * @param numCentroids
+		 * @return buffer size, must be at least 1
+		 */
+		int getBufferSize(int numCentroids);
+	}
+	
+	public static final class SimpleBufferStrategy implements BufferStrategy {
+
+		private final double relativeSize;
+		private final int mimimumSize;
+		
+		public SimpleBufferStrategy(double relativeSize, int mimimumSize) {
+			this.relativeSize = relativeSize;
+			this.mimimumSize = mimimumSize;
+		}
+
+		public int getBufferSize(int numCentroids) {
+			return Math.max(mimimumSize, (int)(relativeSize*numCentroids));
+		}
+	}
 	
 	public static abstract class AbstractPartitionStrategy implements PartitionStrategy {
 
@@ -245,39 +269,43 @@ public class TDigestQuantile {
 			return new Partitioner() {
 				
 				private final double w = 2./sortedCentroids.getTotalWeight();
-				private final double lim = 2.*delta;
+				private final double delta2 = 2.*delta;
+				private final double lim = (FastMath.PI*0.5>=delta2)?FastMath.sin(delta2):Double.POSITIVE_INFINITY;
 				
 				public boolean partitionCriterionViolated(int startIdx, int endIdx) {
 					long q1 = (startIdx>0)?sortedCentroids.getAccumulatedWeight(startIdx-1):0L;
 					long q2 = sortedCentroids.getAccumulatedWeight(endIdx);
-					return FastMath.asin(w*q2)-FastMath.asin(w*q1) > lim; // TODO use addition law for asin to avoid asin evaluations
+					double alpha = w*q2-1.;
+					double beta = w*q1-1.;
+					return alpha*FastMath.sqrt(1.-beta*beta) - beta*FastMath.sqrt(1.-alpha*alpha) > lim;  
 				}
 			};
 		}
 	}
 
-	private PartitionStrategy partitionStrategy;
+	private final PartitionStrategy partitionStrategy;
 	
 	private long[] accumulatedCentroidWeights;
 	private double[] centroidMeans;	
-	private final double[] buffer;
+	private double[] buffer;
 	private int bufferCounter;
 	private double minimum;
 	private double maximum;
+	private final BufferStrategy bufferStrategy;
 	
 	
 	// TODO introduce buffer strategy, choose buffer size relative to number of centroids
-	public TDigestQuantile(PartitionStrategy partitionStrategy, int bufferSize) {
-		
-		assert bufferSize > 0;
+	public TDigestQuantile(PartitionStrategy partitionStrategy, BufferStrategy bufferStrategy) {
 		
 		this.bufferCounter = 0;
-		this.buffer = new double[bufferSize];
+		
 		this.centroidMeans = new double[0];
 		this.accumulatedCentroidWeights = new long[0];
 		this.partitionStrategy = partitionStrategy;
+		this.bufferStrategy = bufferStrategy;
 		this.minimum = Double.POSITIVE_INFINITY;
 		this.maximum = Double.NEGATIVE_INFINITY;
+		this.buffer = new double[bufferStrategy.getBufferSize(0)];
 	}
 
 	public void add(double value) {
@@ -286,6 +314,7 @@ public class TDigestQuantile {
 		bufferCounter += 1;
 		if (bufferCounter == buffer.length) {
 			collapse();
+			buffer = new double[bufferStrategy.getBufferSize(centroidMeans.length)];
 		}
 	}
 		

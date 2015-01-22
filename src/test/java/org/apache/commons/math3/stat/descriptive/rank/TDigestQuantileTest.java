@@ -11,6 +11,7 @@ import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionS
 import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy3;
 import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy4;
 import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy;
+import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.SimpleBufferStrategy;
 import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.SortedCentroids;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -141,8 +142,8 @@ public class TDigestQuantileTest {
 		testPartition(centroids, new PartitionStrategy3(5.0), new int[] {20});
 		testPartition(centroids, new PartitionStrategy3(1000.0), new int[] {20});
 
-		testPartition(centroids, new PartitionStrategy4(0.05), new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 20});
-		testPartition(centroids, new PartitionStrategy4(0.2), new int[] {3, 6, 8, 9, 20});
+		testPartition(centroids, new PartitionStrategy4(0.05), new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20});
+		testPartition(centroids, new PartitionStrategy4(0.2), new int[] {1, 3, 6, 9, 12, 15, 17, 19, 20});
 		testPartition(centroids, new PartitionStrategy4(1.0), new int[] {20});
 		testPartition(centroids, new PartitionStrategy4(5.0), new int[] {20});
 		testPartition(centroids, new PartitionStrategy4(1000.0), new int[] {20});
@@ -150,19 +151,57 @@ public class TDigestQuantileTest {
 	
 	@Ignore
 	@Test
-	public void testPerformance() {
+	public void testPerformanceRandom() {
 		
-		final int N = 500000000;
-		final TDigestQuantile quantile =  new TDigestQuantile(new PartitionStrategy1(1e-2), 10000);
+		final int M = 100;
+		final int N = 1000000;
 		
-		Random random = new Random(); 
-		
+		final double values[] = new double[N];
+		Random random = new Random(0);
 		for (int i = 0; i < N; ++i) {
-			// quantile.add(random.nextDouble());
-			quantile.add(i);
+			values[i] = random.nextDouble();
 		}
+		
+		long  start = System.currentTimeMillis();
+		for (int m = 0; m < M; ++m) {			
+			final TDigestQuantile quantile =  new TDigestQuantile(new PartitionStrategy4(1e-3), new SimpleBufferStrategy(2.0, 10));
+			for (int i = 0; i < N; ++i) {
+				quantile.add(values[i]);
+			}
+		}
+		long end = System.currentTimeMillis(); 		
+		
+		System.out.println("Avg time add operation unsorted data = " + ((end - start)*1e6)/(N*M) + "ns.");
+		
 	}
-	
+
+	@Ignore
+	@Test
+	public void testPerformanceSequential() {
+		
+		final int M = 100;
+		final int N = 1000000;
+		
+		final double values[] = new double[N];
+		Random random = new Random(0);
+		for (int i = 0; i < N; ++i) {
+			values[i] = random.nextDouble();
+		}
+		Arrays.sort(values);
+		
+		long  start = System.currentTimeMillis();
+		for (int m = 0; m < M; ++m) {			
+			final TDigestQuantile quantile =  new TDigestQuantile(new PartitionStrategy4(1e-3), new SimpleBufferStrategy(2.0, 10));
+			for (int i = 0; i < N; ++i) {
+				quantile.add(values[i]);
+			}
+		}
+		long end = System.currentTimeMillis(); 		
+		
+		System.out.println("Avg time add operation sorted data = " + ((end - start)*1e6)/(N*M) + "ns.");
+		
+	}
+
 	@Test
 	public void testCalculateMergedCentroids() {
 		
@@ -185,7 +224,7 @@ public class TDigestQuantileTest {
 		
 		// TODO improve test
 		
-		TDigestQuantile tDigestQuantile = new TDigestQuantile(NEVER_MERGE_PARTITION_STRATEGY, 1);
+		TDigestQuantile tDigestQuantile = new TDigestQuantile(NEVER_MERGE_PARTITION_STRATEGY, new SimpleBufferStrategy(0., 1));
 		
 		double min = 3.4;
 		double max = 17.8;
@@ -220,7 +259,7 @@ public class TDigestQuantileTest {
 		
 		// TODO improve test
 		
-		TDigestQuantile tDigestQuantile = new TDigestQuantile(ALWAYS_MERGE_PARTITION_STRATEGY, 1);
+		TDigestQuantile tDigestQuantile = new TDigestQuantile(ALWAYS_MERGE_PARTITION_STRATEGY, new SimpleBufferStrategy(0., 1));
 		
 		double min = 3.4;
 		double max = 17.8;
@@ -247,6 +286,30 @@ public class TDigestQuantileTest {
 		}
 		for (int i = 0; i < N_TEST; ++i) {
 			assertEquals(max, tDigestQuantile.getQuantile(1.-0.5/N_ADD + (double)i/(N_TEST-1)*0.5/N_ADD), eps);
+		}
+	}
+	
+	@Test
+	public void testAddManyValues() {
+		
+		Random random = new Random(0);
+		int numValues = 100000;
+		
+		double[] values = new double[numValues];
+		for (int i = 0; i < numValues; ++i) {
+			values[i] = random.nextDouble();
+		}
+		
+		final double[] pValues = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
+		
+		TDigestQuantile quantileEstimator = new TDigestQuantile(new PartitionStrategy1(1e-2), new SimpleBufferStrategy(0., 100));
+		
+		for (double value : values) {
+			quantileEstimator.add(value);
+		}
+		
+		for (double pValue : pValues) {
+			assertEquals(pValue, quantileEstimator.getQuantile(pValue), 0.01);
 		}
 	}
 	
