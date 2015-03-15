@@ -53,6 +53,68 @@ If the output is not quite correct, check for invisible trailing spaces!
     <release version="TBD" date="TBD" description="TBD">
     </release>
 
+    <release version="4.0" date="XXXX-XX-XX" description="">
+      <action dev="tn" type="fix" issue="MATH-1209" due-to="Jonathan Ogilvie">
+        Fixed link to algorithm description in "PoissonDistribution#sample()".
+      </action>
+      <action dev="tn" type="update" issue="MATH-757">
+        Removed broken synchronization support in "ResizableDoubleArray".
+      </action>
+      <action dev="tn" type="add" issue="MATH-945">
+        Added method "T log10()" to interface "RealFieldElement".
+      </action>
+      <action dev="psteitz" type="fix" issue="MATH-1208">
+         EmpiricalDistribution cumulativeProbability can return NaN when evaluated within a constant bin.
+      </action>
+      <action dev="psteitz" type="fix" issue="MATH-1203">
+        EmpiricalDistribution getKernel fails for buckets with only multiple instances of the same value.
+      </action>
+      <action dev="tn" type="update" issue="MATH-869">
+        "SpearmansCorrelation" will now throw an "MathIllegalArgumentException"
+        if provided with a "NaturalRanking" instance that uses "REMOVED" as "NaNStrategy".
+      </action>
+      <action dev="tn" type="update" issue="MATH-869">
+        "NullArgumentException" extends now "java.lang.NullPointerException"
+        instead of "MathIllegalArgumentException".
+      </action>
+      <action dev="tn" type="update" issue="MATH-839" due-to="Gilles Sadowski">
+        Renamed "cumulativeProbability(double, double)" to "probability(double, double)"
+        in "IntegerDistribution" and "RealDistribution".
+      </action>
+      <action dev="tn" type="add" issue="MATH-1039" due-to="Aleksei Dievskii">
+        Added logDensity(double) to RealDistribution and logProbability(int)
+        to IntegerDistribution interface. The implementations have already been
+        updated in release 3.3. 
+      </action>
+      <action dev="tn" type="update" issue="MATH-1155">
+        WELL type pseudo-random number generators have been refactored:
+        the cached indirection index tables per instance are now stored
+        in a static instance. This reduces the initialization cost when
+        creating a new instance.
+      </action>
+      <action dev="evanward" type="fix" issue="MATH-1204">
+        "UnivariateSolverUtils#bracket(...)" sometimes failed to bracket
+        if a reached the lower bound.
+      </action>
+      <action dev="tn" type="remove" issue="MATH-1050">
+        Removed "ArithmeticUtils#pow(int, long)" and "ArithmeticUtils#pow(long, long)".
+      </action>
+      <action dev="tn" type="update" issue="MATH-825" due-to="Gilles Sadowski">
+        Method "LaguerreSolver#laguerre(...)" has been made private.
+      </action>
+      <action dev="tn" type="update" issue="MATH-760" due-to="sebb">
+        Field "windowSize" in "DescriptiveStatistics" has been made private.
+      </action>
+      <action dev="sebb" type="add" issue="MATH-1198">
+        Simplified "FastMath#exp(double)" in order to avoid a potential
+        Java 1.5 JIT bug when calling with negative infinity as argument.
+      </action>
+      <action dev="erans" type="add" issue="MATH-1199">
+        Added method "getQuadraticMean()" to "DescriptiveStatistics"
+        and "SummaryStatistics" which calculates the root mean square.
+      </action>
+    </release>
+
     <release version="3.4.1" date="2015-01-11" description="
 This is a maintenance release: It fixes issue MATH-1188.
 ">
