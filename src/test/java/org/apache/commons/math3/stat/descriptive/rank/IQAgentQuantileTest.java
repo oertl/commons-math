@@ -1,9 +1,9 @@
 package org.apache.commons.math3.stat.descriptive.rank;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertArrayEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,8 +16,6 @@ import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.DynamicSum
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.Histogram;
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.HistogramIterator;
 import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.HistogramIterator1;
-import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy4;
-import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.SimpleBufferStrategy;
 import org.apache.commons.math3.util.MathArrays;
 import org.apache.commons.math3.util.MathArrays.OrderDirection;
 import org.junit.Ignore;
@@ -28,8 +26,8 @@ public class IQAgentQuantileTest {
 	@Ignore
 	@Test
 	public void testPerformance() {
-		int numPValues = 30;
-		double[] pValues = new double[numPValues];
+		final int numPValues = 30;
+		final double[] pValues = new double[numPValues];
 		for (int i = 0; i < numPValues; ++i) {
 			pValues[i] = i/(numPValues-1.);
 		}
@@ -46,8 +44,8 @@ public class IQAgentQuantileTest {
 	@Test
 	public void testPerformanceRandom() {
 		
-		int numPValues = 30;
-		double[] pValues = new double[numPValues];
+		final int numPValues = 30;
+		final double[] pValues = new double[numPValues];
 		for (int i = 0; i < numPValues; ++i) {
 			pValues[i] = i/(numPValues-1.);
 		}
@@ -56,19 +54,19 @@ public class IQAgentQuantileTest {
 		final int N = 1000000;
 		
 		final double values[] = new double[N];
-		Random random = new Random(0);
+		final Random random = new Random(0);
 		for (int i = 0; i < N; ++i) {
 			values[i] = random.nextDouble();
 		}
 		
-		long  start = System.currentTimeMillis();
+		final long  start = System.currentTimeMillis();
 		for (int m = 0; m < M; ++m) {			
 			final IQAgentQuantile quantile =  new IQAgentQuantile(pValues, 30);
 			for (int i = 0; i < N; ++i) {
 				quantile.add(values[i]);
 			}
 		}
-		long end = System.currentTimeMillis(); 		
+		final long end = System.currentTimeMillis(); 		
 		
 		System.out.println("Avg time add operation unsorted data = " + ((end - start)*1e6)/(N*M) + "ns.");
 		
@@ -77,7 +75,7 @@ public class IQAgentQuantileTest {
 	
 	@Test
 	public void testDynamicSum() {
-		DynamicSum dynamicSum = new DynamicSum(7);
+		final DynamicSum dynamicSum = new DynamicSum(7);
 		assertEquals(1d, dynamicSum.update(0, 1),0);
 		assertEquals(3d, dynamicSum.update(1, 2),0);
 		assertEquals(6d, dynamicSum.update(2, 3),0);
@@ -122,16 +120,16 @@ public class IQAgentQuantileTest {
 		
 		final HistrogramIteratorSupplier iteratorSupplier = getHistogramIterator1Supplier();
 		
-		double binBoundaries[] = {1., 2., 3.};
-		double cumulativeFrequencies[] = {1., 2.};
+		final double binBoundaries[] = {1., 2., 3.};
+		final double cumulativeFrequencies[] = {1., 2.};
 	
-		List<Histogram> histograms = new ArrayList<Histogram>();
+		final List<Histogram> histograms = new ArrayList<Histogram>();
 		
 		histograms.add(IQAgentQuantile.cumulativeFrequenciesAsHistogram(cumulativeFrequencies, binBoundaries, 2.));
 		histograms.add(IQAgentQuantile.cumulativeFrequenciesAsHistogram(cumulativeFrequencies, binBoundaries, 2.));
 		histograms.add(IQAgentQuantile.cumulativeFrequenciesAsHistogram(cumulativeFrequencies, binBoundaries, 2.));
 		
-		HistogramIterator iterator = iteratorSupplier.get(histograms);
+		final HistogramIterator iterator = iteratorSupplier.get(histograms);
 		
 		assertEquals(Double.NEGATIVE_INFINITY, iterator.getMinimumValue(), 0.0);
 		assertEquals(1., iterator.getMaximumValue(), 0.0);
@@ -217,11 +215,11 @@ public class IQAgentQuantileTest {
 
 		final HistrogramIteratorSupplier iteratorSupplier = getHistogramIterator1Supplier();
 
-		Collection<Histogram> histograms = new ArrayList<Histogram>();
+		final Collection<Histogram> histograms = new ArrayList<Histogram>();
 		
 		histograms.add(IQAgentQuantile.sortedValuesAsHistogram(new double[]{2.7}, 1, 3.));
 		
-		HistogramIterator iterator = iteratorSupplier.get(histograms);
+		final HistogramIterator iterator = iteratorSupplier.get(histograms);
 		
 		assertEquals(Double.NEGATIVE_INFINITY, iterator.getMinimumValue(), 0.0);
 		assertEquals(2.7, iterator.getMaximumValue(), 0.0);
@@ -255,9 +253,9 @@ public class IQAgentQuantileTest {
 		Arrays.sort(values1);
 		final Histogram histogram1 = IQAgentQuantile.sortedValuesAsHistogram(values1, values1.length, 10./170.);
 		
-		double[] quantiles = {0.0, 0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.0};
+		final double[] quantiles = {0.0, 0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.0};
 		final Histogram histogram2 = IQAgentQuantile.asHistogram(pValues, quantiles, 160, 160./170.);
-		HistogramIterator iterator = new IQAgentQuantile.HistogramIterator1(Arrays.asList(histogram1, histogram2));
+		final HistogramIterator iterator = new IQAgentQuantile.HistogramIterator1(Arrays.asList(histogram1, histogram2));
 		
 		double sum1 = 0.;
 		double sum2 = 0.;
@@ -338,7 +336,7 @@ public class IQAgentQuantileTest {
 	
 	private static final HistrogramIteratorSupplier getHistogramIterator1Supplier() {
 		return new HistrogramIteratorSupplier() {
-			public HistogramIterator get(Collection<? extends Histogram> histograms) {
+			public HistogramIterator get(final Collection<? extends Histogram> histograms) {
 				return new HistogramIterator1(histograms);
 			}
 		};
@@ -352,7 +350,7 @@ public class IQAgentQuantileTest {
 			
 		final Histogram histogram = IQAgentQuantile.cumulativeFrequenciesAsHistogram(new double[]{1.}, new double[]{min, max}, 1.);
 		
-		int N=100;
+		final int N=100;
 		
 		final double[] cumulativeFrequencies = new double[N];
 		final double[] expectedValues = new double[N];
@@ -361,7 +359,7 @@ public class IQAgentQuantileTest {
 			expectedValues[i] = i/(N-1.)*(max-min)+min;
 		}
 		
-		double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
+		final double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
 		
 		assertArrayEquals(expectedValues, values, 1e-30);
 	}
@@ -373,7 +371,7 @@ public class IQAgentQuantileTest {
 		
 		final double[] cumulativeFrequencies = {0.5};
 		final double[] expectedValues = {1.5};
-		double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
+		final double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
 		
 		assertArrayEquals(expectedValues, values, 1e-30);
 	}
@@ -387,7 +385,7 @@ public class IQAgentQuantileTest {
 		
 		final double[] cumulativeFrequencies = {-1.};
 		final double[] expectedValues = {1.};
-		double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
+		final double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
 		
 		assertArrayEquals(expectedValues, values, 1e-30);
 	}
@@ -401,7 +399,7 @@ public class IQAgentQuantileTest {
 		
 		final double[] cumulativeFrequencies = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
 
-		double[] result = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
+		final double[] result = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
 
 		MathArrays.checkOrder(result, OrderDirection.INCREASING, false);	
 	}
@@ -441,7 +439,7 @@ public class IQAgentQuantileTest {
 		double[] quantiles = {0.0, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.51, 0.6, 0.7, 0.8, 0.9, 1.0};
 		
 		for (int i = 0; i< 1000;++i) {
-			Histogram histogram = IQAgentQuantile.asHistogram(pValues, quantiles, 10, 1.);
+			final Histogram histogram = IQAgentQuantile.asHistogram(pValues, quantiles, 10, 1.);
 			quantiles = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), pValues);
 		}
 		
@@ -463,7 +461,7 @@ public class IQAgentQuantileTest {
 		final double[] cumulativeFrequencies = {-1., 0., 1., 2., 3.};
 		final double[] expectedValues = {min, min, (min+max)*0.5, max, max};
 		
-		double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
+		final double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
 		
 		assertArrayEquals(expectedValues, values, 1e-30);
 	}
@@ -479,7 +477,7 @@ public class IQAgentQuantileTest {
 		final double[] cumulativeFrequencies = {-1., 0., 1.};
 		final double[] expectedValues = {min, min, (min+max)*0.5};
 		
-		double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
+		final double[] values = IQAgentQuantile.evaluateSumOfHistograms(Collections.singleton(histogram), cumulativeFrequencies);
 		
 		assertArrayEquals(expectedValues, values, 1e-30);
 	}
@@ -487,7 +485,7 @@ public class IQAgentQuantileTest {
 	@Test
 	public void testAddSingleValue() {
 		
-		IQAgentQuantile quantileEstimator = new IQAgentQuantile(new double[]{0., 1.}, 1);
+		final IQAgentQuantile quantileEstimator = new IQAgentQuantile(new double[]{0., 1.}, 1);
 		
 		final double value = 0.5;
 		
@@ -547,23 +545,23 @@ public class IQAgentQuantileTest {
 	@Test
 	public void testAddManyValues() {
 		
-		Random random = new Random(0);
-		int numValues = 100000;
+		final Random random = new Random(0);
+		final int numValues = 100000;
 		
-		double[] values = new double[numValues];
+		final double[] values = new double[numValues];
 		for (int i = 0; i < numValues; ++i) {
 			values[i] = random.nextDouble();
 		}
 		
 		final double[] pValues = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
 		
-		IQAgentQuantile quantileEstimator = new IQAgentQuantile(pValues, 10);
+		final IQAgentQuantile quantileEstimator = new IQAgentQuantile(pValues, 10);
 		
-		for (double value : values) {
+		for (final double value : values) {
 			quantileEstimator.add(value);
 		}
 		
-		for (double pValue : pValues) {
+		for (final double pValue : pValues) {
 			assertEquals(pValue, quantileEstimator.getQuantile(pValue), 0.01);
 		}
 	}
@@ -571,13 +569,13 @@ public class IQAgentQuantileTest {
 	@Test
 	public void testAsHistogram() {
 		
-		double[] pValues = {0., 0.3, 0.7, 0.8, 1.0};
-		double[] quantiles = {-9., -3., 1., 7., 8.};
+		final double[] pValues = {0., 0.3, 0.7, 0.8, 1.0};
+		final double[] quantiles = {-9., -3., 1., 7., 8.};
 		
-		long count = 4;
-		double scale = 2.;
+		final long count = 4;
+		final double scale = 2.;
 		
-		double eps = 1e-8;
+		final double eps = 1e-8;
 		
 		final Histogram histogram = IQAgentQuantile.asHistogram(pValues, quantiles, count, scale);
 		
