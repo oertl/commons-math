@@ -1,10 +1,11 @@
-package org.apache.commons.math3.stat.descriptive.rank;
+package org.apache.commons.math4.stat.descriptive.rank;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Random;
 
+import org.apache.commons.math4.stat.descriptive.rank.HighDynamicRangeQuantile;
 import org.junit.Test;
 
 public class HighDynamicRangeQuantileTest {

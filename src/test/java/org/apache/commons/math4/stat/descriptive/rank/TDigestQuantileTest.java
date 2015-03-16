@@ -1,4 +1,4 @@
-package org.apache.commons.math3.stat.descriptive.rank;
+package org.apache.commons.math4.stat.descriptive.rank;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -6,10 +6,10 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy;
-import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy1;
-import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.PartitionStrategy2;
-import org.apache.commons.math3.stat.descriptive.rank.TDigestQuantile.Partitioner;
+import org.apache.commons.math4.stat.descriptive.rank.TDigestQuantile.PartitionStrategy;
+import org.apache.commons.math4.stat.descriptive.rank.TDigestQuantile.PartitionStrategy1;
+import org.apache.commons.math4.stat.descriptive.rank.TDigestQuantile.PartitionStrategy2;
+import org.apache.commons.math4.stat.descriptive.rank.TDigestQuantile.Partitioner;
 import org.junit.Test;
 
 public class TDigestQuantileTest {

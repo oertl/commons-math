@@ -1,10 +1,10 @@
-package org.apache.commons.math3.stat.descriptive.rank;
+package org.apache.commons.math4.stat.descriptive.rank;
 
 final class MinHeapUtils {
 	
 	private MinHeapUtils() {}
 	
-	static final MinDoubleIntHeap createMinDoubleIntHeap(double[] initialValues) {
+	static final MinDoubleIntHeap createMinDoubleIntHeap(final double[] initialValues) {
 		switch(initialValues.length) {
 		case 1:
 			return new MinDoubleIntHeapSingleValue(initialValues[0]);
@@ -30,8 +30,8 @@ final class MinHeapUtils {
 		private final double[] values;
 		private final int[] indices;
 		
-		public MinDoubleIntHeapGeneral(double[] values) {
-			int n = values.length;
+		public MinDoubleIntHeapGeneral(final double[] values) {
+			final int n = values.length;
 			
 			this.values = new double[n];
 			this.indices = new int[n];
@@ -44,15 +44,18 @@ final class MinHeapUtils {
 			}
 		}
 		
+		@Override
 		public int getMinIndex() {
 			return indices[0];
 		}
 		
+		@Override
 		public double getMinValue() {
 			return values[0];
 		}
 		
-		public void update(double newValue) {
+		@Override
+		public void update(final double newValue) {
 			
 			final int n = values.length;
 			
@@ -62,7 +65,7 @@ final class MinHeapUtils {
 			
 			while(true) {
 				
-				int leftChildIdx = (parentIdx << 1) | 1;			
+				final int leftChildIdx = (parentIdx << 1) | 1;			
 				
 				if (leftChildIdx < n-1) {
 					
@@ -107,10 +110,10 @@ final class MinHeapUtils {
 		private final double[] values;
 		private final int[] indices;
 		
-		public MinDoubleIntHeap2(double[] values) {
-			int nt = values.length;
+		public MinDoubleIntHeap2(final double[] values) {
+			final int nt = values.length;
 			
-			int n = (Integer.highestOneBit(nt)<<1)-1;
+			final int n = (Integer.highestOneBit(nt)<<1)-1;
 			
 			
 			
@@ -128,15 +131,18 @@ final class MinHeapUtils {
 			}
 		}
 		
+		@Override
 		public int getMinIndex() {
 			return indices[0];
 		}
 		
+		@Override
 		public double getMinValue() {
 			return values[0];
 		}
 		
-		public void update(double newValue) {
+		@Override
+		public void update(final double newValue) {
 			
 			final int n = values.length;
 			
@@ -180,18 +186,21 @@ final class MinHeapUtils {
 		
 		private double value;
 		
-		public MinDoubleIntHeapSingleValue(double value) {
+		public MinDoubleIntHeapSingleValue(final double value) {
 			this.value = value;
 		}
 		
+		@Override
 		public int getMinIndex() {
 			return 0;
 		}
 		
-		public void update(double newValue) {
+		@Override
+		public void update(final double newValue) {
 			value = newValue;
 		}
 
+		@Override
 		public double getMinValue() {
 			return value;
 		}
@@ -203,21 +212,24 @@ final class MinHeapUtils {
 		private double value1;
 		private int minIndex;
 		
-		public MinDoubleIntHeapTwoValues(double value0, double value1) {
+		public MinDoubleIntHeapTwoValues(final double value0, final double value1) {
 			this.value0 = value0;
 			this.value1 = value1;
 			minIndex = (value0 <= value1)?0:1;
 		}
 		
+		@Override
 		public int getMinIndex() {
 			return minIndex;
 		}
 		
+		@Override
 		public double getMinValue() {
 			return (minIndex==0)?value0:value1;
 		}
 		
-		public void update(double newValue) {
+		@Override
+		public void update(final double newValue) {
 			if (minIndex==0) {
 				value0 = newValue;
 			}

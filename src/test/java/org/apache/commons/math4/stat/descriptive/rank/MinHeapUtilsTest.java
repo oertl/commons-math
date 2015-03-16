@@ -1,12 +1,12 @@
-package org.apache.commons.math3.stat.descriptive.rank;
+package org.apache.commons.math4.stat.descriptive.rank;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.math3.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeap;
-import org.apache.commons.math3.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeapGeneral;
-import org.apache.commons.math3.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeapSingleValue;
-import org.apache.commons.math3.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeapTwoValues;
+import org.apache.commons.math4.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeap;
+import org.apache.commons.math4.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeapGeneral;
+import org.apache.commons.math4.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeapSingleValue;
+import org.apache.commons.math4.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeapTwoValues;
 import org.junit.Test;
 
 public class MinHeapUtilsTest {
@@ -14,7 +14,7 @@ public class MinHeapUtilsTest {
 	@Test
 	public void testMinDoubleIntHeapGeneral1() {
 		
-		MinDoubleIntHeap heap = new MinDoubleIntHeapGeneral(new double[]{2., 1., 3., 5., 4.});		
+		final MinDoubleIntHeap heap = new MinDoubleIntHeapGeneral(new double[]{2., 1., 3., 5., 4.});		
 		assertEquals(1, heap.getMinIndex());
 		assertEquals(1., heap.getMinValue(), 0.);
 		
@@ -42,7 +42,7 @@ public class MinHeapUtilsTest {
 	@Test
 	public void testMinDoubleIntHeapGeneral2() {
 		
-		MinDoubleIntHeap heap = new MinDoubleIntHeapGeneral(new double[]{2., 1.});		
+		final MinDoubleIntHeap heap = new MinDoubleIntHeapGeneral(new double[]{2., 1.});		
 		assertEquals(1, heap.getMinIndex());
 		assertEquals(1., heap.getMinValue(), 0.);
 		
@@ -58,7 +58,7 @@ public class MinHeapUtilsTest {
 	@Test
 	public void testMinDoubleIntHeapGeneral3() {
 		
-		MinDoubleIntHeap heap = new MinDoubleIntHeapGeneral(new double[]{3., 1.});		
+		final MinDoubleIntHeap heap = new MinDoubleIntHeapGeneral(new double[]{3., 1.});		
 		assertEquals(1, heap.getMinIndex());
 		assertEquals(1., heap.getMinValue(), 0.);
 		
@@ -70,7 +70,7 @@ public class MinHeapUtilsTest {
 	@Test
 	public void testMinDoubleIntHeapGeneral4() {
 		
-		MinDoubleIntHeap heap = new MinDoubleIntHeapGeneral(new double[]{2., 1., 3., 5., 4.});		
+		final MinDoubleIntHeap heap = new MinDoubleIntHeapGeneral(new double[]{2., 1., 3., 5., 4.});		
 		assertEquals(1, heap.getMinIndex());
 		assertEquals(1., heap.getMinValue(), 0.);
 		
@@ -81,7 +81,7 @@ public class MinHeapUtilsTest {
 	
 	@Test
 	public void testMinDoubleIntHeapSingleValue1() {
-		MinDoubleIntHeap heap = new MinDoubleIntHeapSingleValue(2.);
+		final MinDoubleIntHeap heap = new MinDoubleIntHeapSingleValue(2.);
 		assertEquals(0, heap.getMinIndex());
 		assertEquals(2., heap.getMinValue(), 0.);
 		
@@ -92,7 +92,7 @@ public class MinHeapUtilsTest {
 	
 	@Test
 	public void testMinDoubleIntHeapTwoValues1() {
-		MinDoubleIntHeap heap = new MinDoubleIntHeapTwoValues(2., 4.);
+		final MinDoubleIntHeap heap = new MinDoubleIntHeapTwoValues(2., 4.);
 		assertEquals(0, heap.getMinIndex());
 		assertEquals(2., heap.getMinValue(), 0.);
 		
@@ -107,7 +107,7 @@ public class MinHeapUtilsTest {
 
 	@Test
 	public void testMinDoubleIntHeapTwoValues2() {
-		MinDoubleIntHeap heap = new MinDoubleIntHeapTwoValues(7., 4.);
+		final MinDoubleIntHeap heap = new MinDoubleIntHeapTwoValues(7., 4.);
 		assertEquals(1, heap.getMinIndex());
 		assertEquals(4., heap.getMinValue(), 0.);
 		

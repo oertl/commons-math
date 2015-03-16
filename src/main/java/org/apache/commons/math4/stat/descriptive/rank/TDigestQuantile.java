@@ -1,10 +1,11 @@
-package org.apache.commons.math3.stat.descriptive.rank;
+package org.apache.commons.math4.stat.descriptive.rank;
 
 import java.util.Arrays;
 
-import org.apache.commons.math3.exception.NotPositiveException;
-import org.apache.commons.math3.exception.OutOfRangeException;
-import org.apache.commons.math3.util.MathUtils;
+import org.apache.commons.math4.exception.NotPositiveException;
+import org.apache.commons.math4.exception.OutOfRangeException;
+import org.apache.commons.math4.util.MathUtils;
+
 
 
 // TODO introduce abstract class for TDigestQuantile and IQAgentQuantile
@@ -47,16 +48,18 @@ public class TDigestQuantile {
 
 		private final double compression;
 		
-		public PartitionStrategy1(double compression) {
+		public PartitionStrategy1(final double compression) {
 			if (compression < 0.) {
 				throw new NotPositiveException(compression);
 			}
 			this.compression = compression;
 		}
 	
+		@Override
 		public Partitioner createPartitioner() {
 			return new Partitioner() {
-				public double accumulatedCentroidSizeLimit(double pValue) {
+				@Override
+				public double accumulatedCentroidSizeLimit(final double pValue) {
 					return 0.25d*Math.log(pValue/(1.-pValue))*compression;
 				}
 			};
@@ -67,16 +70,18 @@ public class TDigestQuantile {
 
 		private final double compression;
 		
-		public PartitionStrategy2(double compression) {
+		public PartitionStrategy2(final double compression) {
 			if (compression < 0.) {
 				throw new NotPositiveException(compression);
 			}
 			this.compression = compression;
 		}
 	
+		@Override
 		public Partitioner createPartitioner() {
 			return new Partitioner() {
-				public double accumulatedCentroidSizeLimit(double pValue) {
+				@Override
+				public double accumulatedCentroidSizeLimit(final double pValue) {
 					return pValue*compression;
 				}
 			};
@@ -93,7 +98,7 @@ public class TDigestQuantile {
 	 * @return the number of partitions
 	 */
 	// TOOD javadoc
-	static final int partition(long[] accumulatedWeights, double[] means, int size, PartitionStrategy strategy) {
+	static final int partition(final long[] accumulatedWeights, final double[] means, final int size, final PartitionStrategy strategy) {
 		
 		if (size <= 0) {
 			return 0;
@@ -111,9 +116,9 @@ public class TDigestQuantile {
         double firstMean = means[0];
         double mean = firstMean;
         for (int endIdx = 1; endIdx < size; ++endIdx) {
-        	long endAccumulatedWeights = accumulatedWeights[endIdx];
-        	double endMean = means[endIdx];
-        	double endSizeLimit = partitioner.accumulatedCentroidSizeLimit(endAccumulatedWeights/totalWeight);
+        	final long endAccumulatedWeights = accumulatedWeights[endIdx];
+        	final double endMean = means[endIdx];
+        	final double endSizeLimit = partitioner.accumulatedCentroidSizeLimit(endAccumulatedWeights/totalWeight);
         	
         	if (!(endSizeLimit-startSizeLimit <= 1.)) {
         		accumulatedWeights[partitionCounter] = prevEndAccumulatedWeight;
@@ -149,16 +154,18 @@ public class TDigestQuantile {
 
 		private final double compression;
 		
-		public PartitionStrategy4(double compression) {
+		public PartitionStrategy4(final double compression) {
 			if (compression < 0.) {
 				throw new NotPositiveException(compression);
 			}
 			this.compression = compression;
 		}
 		
+		@Override
 		public Partitioner createPartitioner() {
 			return new Partitioner() {
-				public double accumulatedCentroidSizeLimit(double pValue) {
+				@Override
+				public double accumulatedCentroidSizeLimit(final double pValue) {
 					return 0.5*Math.asin(2.*pValue-1.)*compression;
 				}
 			};
@@ -177,7 +184,7 @@ public class TDigestQuantile {
 	private double maximum;
 	
 	
-	public TDigestQuantile(PartitionStrategy partitionStrategy) {
+	public TDigestQuantile(final PartitionStrategy partitionStrategy) {
 		
 		this.bufferCounter = 0;
 		
@@ -186,16 +193,16 @@ public class TDigestQuantile {
 		this.partitionStrategy = partitionStrategy;
 		this.minimum = Double.POSITIVE_INFINITY;
 		this.maximum = Double.NEGATIVE_INFINITY;
-		int initialBufferSize = INITIAL_BUFFER_SIZE;
+		final int initialBufferSize = INITIAL_BUFFER_SIZE;
 		this.bufferValues = new double[initialBufferSize];
 		this.bufferWeights = new long[initialBufferSize];
 	}
 
-	public void add(double value) {
+	public void add(final double value) {
 		add(value, 1);
 	}
 	
-	public void add(double value, long weight) {
+	public void add(final double value, final long weight) {
 		MathUtils.checkFinite(value);
 		bufferValues[bufferCounter] = value;
 		bufferWeights[bufferCounter] = weight;
@@ -205,27 +212,27 @@ public class TDigestQuantile {
 		}
 	}
 
-	void ensureBufferCapacity(int size) {
-		int currentSize = bufferValues.length;
+	void ensureBufferCapacity(final int size) {
+		final int currentSize = bufferValues.length;
 		if (currentSize < size) {
-			int newSize = size + (size >>> 1);
+			final int newSize = size + (size >>> 1);
 			bufferValues = new double[newSize];
 			bufferWeights = new long[newSize];
 		}
 	}
 		
 	static final void merge(
-			double[] means1,
-			long[] accumulatedWeights1,
-			int offset1,
-			int size1,
-			double[] means2,
-			long[] accumulatedWeights2,
-			int offset2,
-			int size2,
-			double[] mergedMeans,
-			long[] mergedAccumulatedWeights,
-			int mergedOffset) {
+			final double[] means1,
+			final long[] accumulatedWeights1,
+			final int offset1,
+			final int size1,
+			final double[] means2,
+			final long[] accumulatedWeights2,
+			final int offset2,
+			final int size2,
+			final double[] mergedMeans,
+			final long[] mergedAccumulatedWeights,
+			final int mergedOffset) {
 		
 		int index1 = offset1;
 		int index2 = offset2;
@@ -233,9 +240,9 @@ public class TDigestQuantile {
 		double mean2 = (0 < size2)?means2[index2]:Double.POSITIVE_INFINITY;
 		long accumulatedWeight1 = 0;
 		long accumulatedWeight2 = 0;
-		int finalMergedIndex = size1 + size2 + mergedOffset;
-		int finalIndex1 = size1 + offset1;
-		int finalIndex2 = size2 + offset2;
+		final int finalMergedIndex = size1 + size2 + mergedOffset;
+		final int finalIndex1 = size1 + offset1;
+		final int finalIndex2 = size2 + offset2;
 		for(int mergedIndex = mergedOffset; mergedIndex < finalMergedIndex; ++mergedIndex) {
 			if (mean1 <= mean2) {
 				mergedMeans[mergedIndex] = mean1;
@@ -253,27 +260,27 @@ public class TDigestQuantile {
 		}
 	}
 	
-	private final void ensureCentroidsCapacity(int minimumSize) {
-		int currentSize = centroidMeans.length;
+	private final void ensureCentroidsCapacity(final int minimumSize) {
+		final int currentSize = centroidMeans.length;
 		if (currentSize < minimumSize) {
-			int newSize = minimumSize + (minimumSize >>> 1); // TODO improve
+			final int newSize = minimumSize + (minimumSize >>> 1); // TODO improve
 			accumulatedCentroidWeights = Arrays.copyOf(accumulatedCentroidWeights, newSize);
 			centroidMeans = Arrays.copyOf(centroidMeans, newSize);
 		}
 	}
 	
 	static final void mergeReverse(
-			double[] means1,
-			long[] accumulatedWeights1,
-			int offset1,
-			int size1,
-			double[] means2,
-			long[] accumulatedWeights2,
-			int offset2,
-			int size2,
-			double[] mergedMeans,
-			long[] mergedAccumulatedWeights,
-			int mergedOffset) {
+			final double[] means1,
+			final long[] accumulatedWeights1,
+			final int offset1,
+			final int size1,
+			final double[] means2,
+			final long[] accumulatedWeights2,
+			final int offset2,
+			final int size2,
+			final double[] mergedMeans,
+			final long[] mergedAccumulatedWeights,
+			final int mergedOffset) {
 		
 		int index1 = offset1 + size1 - 1;
 		double mean1;
@@ -385,13 +392,13 @@ public class TDigestQuantile {
 	 * @param x x-value for which the corresponding y-value needs to interpolated 
 	 * @return the interpolated value, is always in the range [y1, y2]
 	 */
-	static double interpolate(double x1, double y1, double x2, double y2, double x) { // TODO could be shared with IQAgentQuantile
-		double alpha = (x - x1)/(x2 - x1);
-		double result = y1 + (y2 - y1)*alpha;
+	static double interpolate(final double x1, final double y1, final double x2, final double y2, final double x) { // TODO could be shared with IQAgentQuantile
+		final double alpha = (x - x1)/(x2 - x1);
+		final double result = y1 + (y2 - y1)*alpha;
 		return (result <= y2)?result:y2;
 	}
 
-	public double getQuantile(double pValue) {
+	public double getQuantile(final double pValue) {
 		
 		// TODO improve argument checking
 		if (pValue < 0. || pValue > 1) {
@@ -421,9 +428,9 @@ public class TDigestQuantile {
 		
 		while (maxIndex-minIndex > 1) {
 			
-			int midIndex = (maxIndex+minIndex) >>> 1;
+			final int midIndex = (maxIndex+minIndex) >>> 1;
 		
-			long midWeight = accumulatedCentroidWeights[midIndex];
+			final long midWeight = accumulatedCentroidWeights[midIndex];
 			if (midWeight > desiredAccumulatedCentroidWeight) {
 				maxIndex = midIndex;	
 			}

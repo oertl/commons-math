@@ -1,4 +1,4 @@
-package org.apache.commons.math3.stat.descriptive.rank;
+package org.apache.commons.math4.stat.descriptive.rank;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -12,12 +12,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.DynamicSum;
-import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.Histogram;
-import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.HistogramIterator;
-import org.apache.commons.math3.stat.descriptive.rank.IQAgentQuantile.HistogramIterator1;
-import org.apache.commons.math3.util.MathArrays;
-import org.apache.commons.math3.util.MathArrays.OrderDirection;
+import org.apache.commons.math4.stat.descriptive.rank.IQAgentQuantile.DynamicSum;
+import org.apache.commons.math4.stat.descriptive.rank.IQAgentQuantile.Histogram;
+import org.apache.commons.math4.stat.descriptive.rank.IQAgentQuantile.HistogramIterator;
+import org.apache.commons.math4.stat.descriptive.rank.IQAgentQuantile.HistogramIterator1;
+import org.apache.commons.math4.util.MathArrays;
+import org.apache.commons.math4.util.MathArrays.OrderDirection;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -336,6 +336,7 @@ public class IQAgentQuantileTest {
 	
 	private static final HistrogramIteratorSupplier getHistogramIterator1Supplier() {
 		return new HistrogramIteratorSupplier() {
+			@Override
 			public HistogramIterator get(final Collection<? extends Histogram> histograms) {
 				return new HistogramIterator1(histograms);
 			}

@@ -1,15 +1,16 @@
-package org.apache.commons.math3.stat.descriptive.rank;
+package org.apache.commons.math4.stat.descriptive.rank;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
-import org.apache.commons.math3.exception.OutOfRangeException;
-import org.apache.commons.math3.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeap;
-import org.apache.commons.math3.util.MathArrays;
-import org.apache.commons.math3.util.MathUtils;
-import org.apache.commons.math3.util.MathArrays.OrderDirection;
+import org.apache.commons.math4.exception.OutOfRangeException;
+import org.apache.commons.math4.stat.descriptive.rank.MinHeapUtils.MinDoubleIntHeap;
+import org.apache.commons.math4.util.MathArrays;
+import org.apache.commons.math4.util.MathArrays.OrderDirection;
+import org.apache.commons.math4.util.MathUtils;
+
 
 public class IQAgentQuantile {
 	
@@ -29,7 +30,7 @@ public class IQAgentQuantile {
 	 * @param pValues array of double values the first must be 0., the last must be 1.
 	 * @param bufferSize buffer size, must be at least 1
 	 */
-	public IQAgentQuantile(double[] pValues, int bufferSize) {
+	public IQAgentQuantile(final double[] pValues, final int bufferSize) {
 		
 		// TODO improve argument checks
 		MathUtils.checkNotNull(pValues);
@@ -59,11 +60,13 @@ public class IQAgentQuantile {
 		
 		return new Histogram() {
 			
+			@Override
 			public int getNumberOfBins() {
 				return pValues.length+1;
 			}
 			
-			public double getFrequency(int idx) {
+			@Override
+			public double getFrequency(final int idx) {
 				if (idx > 0 && idx < pValues.length) {
 					return Math.max(0., Math.min(1. - extremeValueWeight, pValues[idx]) - Math.max(extremeValueWeight, pValues[idx-1]))*scale;
 				} else {					
@@ -71,7 +74,8 @@ public class IQAgentQuantile {
 				}
 			}
 			
-			public double getBoundary(int idx) {
+			@Override
+			public double getBoundary(final int idx) {
 				if (idx <= 0) {
 					return quantiles[0];
 				}
@@ -118,7 +122,7 @@ public class IQAgentQuantile {
 		bufferCounter = 0;
 	}
 
-	public void add(double value) {
+	public void add(final double value) {
 		MathUtils.checkFinite(value);
 		buffer[bufferCounter] = value;
 		bufferCounter += 1;
@@ -127,7 +131,7 @@ public class IQAgentQuantile {
 		}
 	}
 	
-	public double getQuantile(double pValue) {
+	public double getQuantile(final double pValue) {
 
 		if (pValue < 0. || pValue > 1.) {
 			throw new OutOfRangeException(pValue, 0., 1.);
@@ -206,11 +210,11 @@ public class IQAgentQuantile {
 		
 		private final double partialSums[];
 		
-		public DynamicSum(int n) {
+		public DynamicSum(final int n) {
 			partialSums = new double[(n-1) << 1];
 		}
 		
-		public double update(int idx, double value) {
+		public double update(final int idx, double value) {
 			int i = partialSums.length-idx;	
 			while(i!=0) {
 				i -= 1;
@@ -243,9 +247,9 @@ public class IQAgentQuantile {
 			this.densitySum = new DynamicSum(numHistograms);
 			this.density = 0.;
 			
-			double yBegin = 0.;
+			final double yBegin = 0.;
 			
-			double[] minValues = new double[numHistograms];
+			final double[] minValues = new double[numHistograms];
 			for(int histogramIdx = 0; histogramIdx < numHistograms; ++histogramIdx) {
 				final Histogram histogram = this.histograms[histogramIdx];
 				minValues[histogramIdx] = histogram.getBoundary(0); 
@@ -259,6 +263,7 @@ public class IQAgentQuantile {
 			this.maxValue = heap.getMinValue();
 		}
 		
+		@Override
 		public boolean advance() {
 			minValue = maxValue;
 			minCumulativeFrequency = maxCumulativeFrequency;
@@ -299,22 +304,27 @@ public class IQAgentQuantile {
 			}
 		}
 		
+		@Override
 		public double getMinimumValue() {
 			return minValue;
 		}
 
+		@Override
 		public double getMaximumValue() {
 			return maxValue;
 		}
 		
+		@Override
 		public double getDensity() {
 			return density;
 		}
 		
+		@Override
 		public double getMinimumCumulativeFrequency() {
 			return minCumulativeFrequency;
 		}
 		
+		@Override
 		public double getMaximumCumulativeFrequency() {
 			return maxCumulativeFrequency;
 		}
@@ -347,15 +357,18 @@ public class IQAgentQuantile {
 		
 		return new Histogram() {
 			
-			public double getBoundary(int idx) {
+			@Override
+			public double getBoundary(final int idx) {
 				return values[idx >>> 1];
 			}
 			
+			@Override
 			public int getNumberOfBins() {
 				return (size<<1)-1;
 			}
 
-			public double getFrequency(int idx) {
+			@Override
+			public double getFrequency(final int idx) {
 				return ((idx & 1) == 0)?increment:0.;
 			}
 		};
@@ -368,15 +381,18 @@ public class IQAgentQuantile {
 		
 		return new Histogram() {
 
+			@Override
 			public int getNumberOfBins() {
 				return cumulativeFrequencies.length;
 			}
 
-			public double getBoundary(int idx) {
+			@Override
+			public double getBoundary(final int idx) {
 				return binBoundaries[idx];
 			}
 
-			public double getFrequency(int idx) {
+			@Override
+			public double getFrequency(final int idx) {
 				double result = cumulativeFrequencies[idx];
 				if (idx >0 ) {
 					result -= cumulativeFrequencies[idx-1];
@@ -396,14 +412,14 @@ public class IQAgentQuantile {
 	 * @param x x-value for which the corresponding y-value needs to interpolated 
 	 * @return the interpolated value, is always in the range [y1, y2]
 	 */
-	static double interpolate(double x1, double y1, double x2, double y2, double x) {
-		double alpha = (x - x1)/(x2 - x1);
-		double result = y1 + (y2 - y1)*alpha;
+	static double interpolate(final double x1, final double y1, final double x2, final double y2, final double x) {
+		final double alpha = (x - x1)/(x2 - x1);
+		final double result = y1 + (y2 - y1)*alpha;
 		return (result <= y2)?result:y2;
 	}
 	
 	
-	static final double[] evaluateSumOfHistograms(final Collection<? extends Histogram> histograms, double[] cumulativeFrequencies) {
+	static final double[] evaluateSumOfHistograms(final Collection<? extends Histogram> histograms, final double[] cumulativeFrequencies) {
 		
 		final double[] values = new double[cumulativeFrequencies.length];
 		
