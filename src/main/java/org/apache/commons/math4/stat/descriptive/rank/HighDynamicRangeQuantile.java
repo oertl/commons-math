@@ -13,7 +13,8 @@ public class HighDynamicRangeQuantile {
 	
 	public HighDynamicRangeQuantile(final double minExpectedQuantileValue, final double maxExpectedQuantileValue, final double maxRelativeError) {
 		
-		// TOOD range checks
+		assert minExpectedQuantileValue >= Double.MIN_NORMAL; // bit operations below are not correct for subnormals
+		// TODO range checks
 		
 		final int arraySize = getIndex(maxExpectedQuantileValue) + 1;
 		counts = new long[arraySize];
@@ -28,14 +29,13 @@ public class HighDynamicRangeQuantile {
 	
 	double getIndexHelper(final double value) {
 		final long valueBits = Double.doubleToRawLongBits(value);
-		final long exponent = (valueBits & 0x7ff0000000000000L) >> 51;
-		final double exponent_mul_3 = exponent + (exponent >> 1);
-		final double mantissa = Double.longBitsToDouble((valueBits & 0x800fffffffffffffL) | 0x3ff0000000000000L);
-		return factor*((mantissa-1.)*(5.-mantissa)+exponent_mul_3);
+		final long exponent = (valueBits & 0x7ff0000000000000L) >>> 52;
+		final double exponentMul3 = exponent + (exponent << 1);
+		final double mantissaPlus1 = Double.longBitsToDouble((valueBits & 0x800fffffffffffffL) | 0x3ff0000000000000L);
+		return factor*((mantissaPlus1-1.)*(5.-mantissaPlus1)+exponentMul3);
 	}
 
 	public void add(final double value, final long count) {
-		
 		
 		if (value >= minExpectedQuantileValue) {
 			final int idx = getIndex(value);
@@ -60,6 +60,4 @@ public class HighDynamicRangeQuantile {
 		}
 		return sum;
 	}
-	
-
 }
